@@ -1,0 +1,54 @@
+const { test, expect } = require('@playwright/test');
+
+
+const BASE_URL = 'http://localhost:3000';
+
+// Fonction pour delete tt todos
+async function clearAllTodos(page) {
+  while (await page.locator('.item .fa-trash').count() > 0) {
+    const firstTrash = page.locator('.item .fa-trash').first();
+    await firstTrash.click();
+    await firstTrash.waitFor({ state: 'detached', timeout: 1000 });
+  }
+}
+
+test.describe('Todo List E2E', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(BASE_URL);
+    await clearAllTodos(page);
+  });
+  test('Ajout d’un todo', async ({ page }) => {
+    await page.goto(BASE_URL);
+    await page.fill('input', 'Ma première tâche');
+    await page.click('button.btn-success');
+    
+    await expect(page.locator('.item .name', { hasText: 'Ma première tâche' }).first()).toBeVisible();
+  });
+
+  test('Compléter un todo', async ({ page }) => {
+    await page.goto(BASE_URL);
+    await page.fill('input', 'À compléter');
+    await page.click('button.btn-success');
+    await page.click('.item:has(.name:text("À compléter")) .toggles');
+    
+    await expect(page.locator('.item.completed .name', { hasText: 'À compléter' })).toBeVisible();
+  });
+
+  test('Décocher un todo', async ({ page }) => {
+    await page.goto(BASE_URL);
+    await page.fill('input', 'À décocher');
+    await page.click('button.btn-success');
+    await page.click('.item:has(.name:has-text("À décocher")) .toggles');
+    await page.click('.item:has(.name:has-text("À décocher")) .toggles');
+
+    await expect(page.locator('.item:not(.false) .name', { hasText: 'À décocher' })).toBeVisible();
+  });
+
+  test('Supprimer un todo', async ({ page }) => {
+    await page.goto(BASE_URL);
+    await page.fill('input', 'À supprimer');
+    await page.click('button.btn-success');
+    await page.click('.item:has(.name:text("À supprimer")) .fa-trash');
+    await expect(page.locator('.item .name', { hasText: 'À supprimer' })).toHaveCount(0);
+  });
+});
