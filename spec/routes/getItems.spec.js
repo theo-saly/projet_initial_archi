@@ -1,5 +1,5 @@
 const db = require('../../src/persistence');
-const getItems = require('../../src/routes/getItems');
+const getItems = require('../../src/controllers/getItems');
 const ITEMS = [{ id: 12345 }];
 
 jest.mock('../../src/persistence', () => ({
