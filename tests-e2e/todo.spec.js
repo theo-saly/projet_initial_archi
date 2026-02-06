@@ -19,22 +19,34 @@ test.describe('Todo List E2E', () => {
   });
   test('Ajout d’un todo', async ({ page }) => {
     await page.goto(BASE_URL);
-    await page.fill('input[placeholder="New Item"]', 'Ma première tâche');
+    await page.fill('input', 'Ma première tâche');
     await page.click('button.btn-success');
+    
     await expect(page.locator('.item .name', { hasText: 'Ma première tâche' }).first()).toBeVisible();
   });
 
   test('Compléter un todo', async ({ page }) => {
     await page.goto(BASE_URL);
-    await page.fill('input[placeholder="New Item"]', 'À compléter');
+    await page.fill('input', 'À compléter');
     await page.click('button.btn-success');
     await page.click('.item:has(.name:text("À compléter")) .toggles');
-    // Ici, tu peux vérifier l’état visuel ou la classe de l’icône si besoin
+    
+    await expect(page.locator('.item.completed .name', { hasText: 'À compléter' })).toBeVisible();
+  });
+
+  test('Décocher un todo', async ({ page }) => {
+    await page.goto(BASE_URL);
+    await page.fill('input', 'À décocher');
+    await page.click('button.btn-success');
+    await page.click('.item:has(.name:has-text("À décocher")) .toggles');
+    await page.click('.item:has(.name:has-text("À décocher")) .toggles');
+
+    await expect(page.locator('.item:not(.false) .name', { hasText: 'À décocher' })).toBeVisible();
   });
 
   test('Supprimer un todo', async ({ page }) => {
     await page.goto(BASE_URL);
-    await page.fill('input[placeholder="New Item"]', 'À supprimer');
+    await page.fill('input', 'À supprimer');
     await page.click('button.btn-success');
     await page.click('.item:has(.name:text("À supprimer")) .fa-trash');
     await expect(page.locator('.item .name', { hasText: 'À supprimer' })).toHaveCount(0);
