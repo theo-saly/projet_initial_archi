@@ -37,7 +37,7 @@ async function init() {
         charset: 'utf8mb4',
     });
 
-    return new Promise((acc, rej) => {
+    return new Promise<void>((acc, rej) => {
         pool.query(
             'CREATE TABLE IF NOT EXISTS todo_items (id varchar(36), name varchar(255), completed boolean) DEFAULT CHARSET utf8mb4',
             err => {
@@ -51,7 +51,7 @@ async function init() {
 }
 
 async function teardown() {
-    return new Promise((acc, rej) => {
+    return new Promise<void>((acc, rej) => {
         pool.end(err => {
             if (err) rej(err);
             else acc();
@@ -90,7 +90,7 @@ async function getItem(id) {
 }
 
 async function storeItem(item) {
-    return new Promise((acc, rej) => {
+    return new Promise<void>((acc, rej) => {
         pool.query(
             'INSERT INTO todo_items (id, name, completed) VALUES (?, ?, ?)',
             [item.id, item.name, item.completed ? 1 : 0],
@@ -103,7 +103,7 @@ async function storeItem(item) {
 }
 
 async function updateItem(id, item) {
-    return new Promise((acc, rej) => {
+    return new Promise<void>((acc, rej) => {
         pool.query(
             'UPDATE todo_items SET name=?, completed=? WHERE id=?',
             [item.name, item.completed ? 1 : 0, id],
@@ -116,7 +116,7 @@ async function updateItem(id, item) {
 }
 
 async function removeItem(id) {
-    return new Promise((acc, rej) => {
+    return new Promise<void>((acc, rej) => {
         pool.query('DELETE FROM todo_items WHERE id = ?', [id], err => {
             if (err) return rej(err);
             acc();
