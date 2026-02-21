@@ -14,3 +14,6 @@ npx playwright test
 
 Back
 npx jest
+
+
+npx jest --coverage --coverageReport=html
