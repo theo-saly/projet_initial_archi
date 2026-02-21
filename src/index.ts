@@ -3,8 +3,12 @@ const app = express();
 const db = require('./persistence');
 const routes = require('./routes/routes');
 
+import authRouter from './routes/auth';
+
 app.use(express.json());
 app.use(express.static(__dirname + '/static'));
+
+app.use('/auth', authRouter);
 
 routes(app);
 

@@ -9,7 +9,11 @@
     "dev": "nodemon -L --exec ts-node src/index.ts"
   },
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "bcryptjs": "^3.0.3",
     "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.3",
     "mysql2": "^2.3.3",
     "sqlite3": "^5.1.2",
     "uuid": "^9.0.0",
