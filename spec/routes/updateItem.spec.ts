@@ -1,5 +1,5 @@
 const db = require('../../src/persistence');
-const updateItem = require('../../src/routes/updateItem');
+const updateItem = require('../../src/controllers/updateItem');
 const ITEM = { id: 12345 };
 
 jest.mock('../../src/persistence', () => ({
