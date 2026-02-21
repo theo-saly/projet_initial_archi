@@ -6,7 +6,14 @@ The application is based on the application from the getting started tutorial at
 
 
 
-
+Front
 npm run dev
 
 npx playwright test
+
+
+Back
+npx jest
+
+
+npx jest --coverage --coverageReport=html
