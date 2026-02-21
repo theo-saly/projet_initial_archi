@@ -39,3 +39,7 @@ npm install wait-port@latest
 npm install express@latest
 
 npm install eslint --save-dev
+
+npm init @eslint/config
+
+npm run lint
