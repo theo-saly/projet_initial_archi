@@ -1,3 +1,5 @@
+import type { TodoItem, TodoRepository } from './TodoRepository';
+
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 const location = process.env.SQLITE_DB_LOCATION || '/etc/todos/todo.db';
@@ -102,7 +104,7 @@ async function removeItem(id) {
     });
 }
 
-module.exports = {
+const repository: TodoRepository = {
     init,
     teardown,
     getItems,
@@ -111,3 +113,5 @@ module.exports = {
     updateItem,
     removeItem,
 };
+
+module.exports = repository;

@@ -1,3 +1,5 @@
+import type { TodoItem, TodoRepository } from './TodoRepository';
+
 const waitPort = require('wait-port');
 const fs = require('fs');
 const mysql = require('mysql2');
@@ -124,7 +126,7 @@ async function removeItem(id) {
     });
 }
 
-module.exports = {
+const repository: TodoRepository = {
     init,
     teardown,
     getItems,
@@ -133,3 +135,5 @@ module.exports = {
     updateItem,
     removeItem,
 };
+
+module.exports = repository;
