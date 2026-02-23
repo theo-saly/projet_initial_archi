@@ -43,3 +43,5 @@ npm install eslint --save-dev
 npm init @eslint/config
 
 npm run lint
+
+docker compose up --build
