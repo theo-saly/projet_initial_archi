@@ -2,6 +2,11 @@ import { Router } from 'express';
 import { createUser, authenticateUser, getUserProfile, deleteUser } from '../persistence/user';
 import jwt from 'jsonwebtoken';
 
+interface TokenPayload {
+  id: number;
+  email: string;
+}
+
 const router = Router();
 
 router.post('/register', (req, res) => {
@@ -28,7 +33,7 @@ router.get('/profile', (req, res) => {
   if (!authHeader) return res.status(401).json({ error: 'Token manquant' });
   const token = authHeader.split(' ')[1];
   try {
-    const decoded: any = jwt.verify(token, 'SECRET_KEY');
+    const decoded = jwt.verify(token, 'SECRET_KEY') as TokenPayload;
     const profile = getUserProfile(decoded.id);
     if (!profile) return res.status(404).json({ error: 'Utilisateur non trouvé' });
     res.json(profile);
@@ -42,7 +47,7 @@ router.delete('/profile', (req, res) => {
   if (!authHeader) return res.status(401).json({ error: 'Token manquant' });
   const token = authHeader.split(' ')[1];
   try {
-    const decoded: any = jwt.verify(token, 'SECRET_KEY');
+    const decoded = jwt.verify(token, 'SECRET_KEY') as TokenPayload;
     const success = deleteUser(decoded.id);
     if (!success) return res.status(404).json({ error: 'Utilisateur non trouvé' });
     res.json({ message: 'Compte supprimé (droit à l’oubli)' });

@@ -1,6 +1,4 @@
 function UserProfile() {
-    const [profile, setProfile] = React.useState(null);
-    const [consent, setConsent] = React.useState(false);
     const [token, setToken] = React.useState('');
 
     const [registerEmail, setRegisterEmail] = React.useState('');
@@ -35,7 +33,6 @@ function UserProfile() {
         });
         const data = await res.json();
         alert(data.message);
-        setProfile(null);
         setToken('');
     };
 
