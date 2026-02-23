@@ -39,32 +39,31 @@ async function teardown() {
     });
 }
 
-async function getItems() {
+async function getItems(): Promise<TodoItem[]> {
     return new Promise((acc, rej) => {
         db.all('SELECT * FROM todo_items', (err, rows) => {
             if (err) return rej(err);
             acc(
-                rows.map(item =>
+                rows.map((item: any) =>
                     Object.assign({}, item, {
                         completed: item.completed === 1,
                     }),
-                ),
+                ) as TodoItem[],
             );
         });
     });
 }
 
-async function getItem(id) {
+async function getItem(id: string): Promise<TodoItem | undefined> {
     return new Promise((acc, rej) => {
         db.all('SELECT * FROM todo_items WHERE id=?', [id], (err, rows) => {
             if (err) return rej(err);
-            acc(
-                rows.map(item =>
-                    Object.assign({}, item, {
-                        completed: item.completed === 1,
-                    }),
-                )[0],
-            );
+            const mapped = rows.map((item: any) =>
+                Object.assign({}, item, {
+                    completed: item.completed === 1,
+                })
+            ) as TodoItem[];
+            acc(mapped[0]);
         });
     });
 }
