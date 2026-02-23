@@ -1,11 +1,14 @@
-const sqlite3 = require('sqlite3').verbose();
-const fs = require('fs');
+import type { TodoItem, TodoRepository } from './TodoRepository';
+import path from 'path';
+
+import sqlite3 from 'sqlite3';
+import fs from 'fs';
 const location = process.env.SQLITE_DB_LOCATION || '/etc/todos/todo.db';
 
-let db, dbAll, dbRun;
+let db;
 
 function init() {
-    const dirName = require('path').dirname(location);
+    const dirName = path.dirname(location);
     if (!fs.existsSync(dirName)) {
         fs.mkdirSync(dirName, { recursive: true });
     }
@@ -19,7 +22,7 @@ function init() {
 
             db.run(
                 'CREATE TABLE IF NOT EXISTS todo_items (id varchar(36), name varchar(255), completed boolean)',
-                (err, result) => {
+                (err) => {
                     if (err) return rej(err);
                     acc();
                 },
@@ -37,32 +40,32 @@ async function teardown() {
     });
 }
 
-async function getItems() {
+
+async function getItems(): Promise<TodoItem[]> {
     return new Promise((acc, rej) => {
         db.all('SELECT * FROM todo_items', (err, rows) => {
             if (err) return rej(err);
             acc(
-                rows.map(item =>
+                rows.map((item: Record<string, unknown>) =>
                     Object.assign({}, item, {
                         completed: item.completed === 1,
                     }),
-                ),
+                ) as TodoItem[],
             );
         });
     });
 }
 
-async function getItem(id) {
+async function getItem(id: string): Promise<TodoItem | undefined> {
     return new Promise((acc, rej) => {
         db.all('SELECT * FROM todo_items WHERE id=?', [id], (err, rows) => {
             if (err) return rej(err);
-            acc(
-                rows.map(item =>
-                    Object.assign({}, item, {
-                        completed: item.completed === 1,
-                    }),
-                )[0],
-            );
+            const mapped = rows.map((item: Record<string, unknown>) =>
+                Object.assign({}, item, {
+                    completed: item.completed === 1,
+                })
+            ) as TodoItem[];
+            acc(mapped[0]);
         });
     });
 }
@@ -102,7 +105,7 @@ async function removeItem(id) {
     });
 }
 
-module.exports = {
+const repository: TodoRepository = {
     init,
     teardown,
     getItems,
@@ -111,3 +114,5 @@ module.exports = {
     updateItem,
     removeItem,
 };
+
+export default repository;

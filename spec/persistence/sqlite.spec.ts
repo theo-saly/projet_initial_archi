@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 // Variable pour stocker l'emplacement de la base de données et le module db
 // Chaque test utilisera une base de données unique pour garantir l'isolation
@@ -20,7 +20,7 @@ beforeEach(async () => {
         if (db && db.teardown) {
             await db.teardown();
         }
-    } catch (err) {
+    } catch {
         // Ignorer les erreurs si la base n'est pas ouverte
     }
 
@@ -34,7 +34,7 @@ beforeEach(async () => {
 
     // Forcer le rechargement du module sqlite pour qu'il utilise la nouvelle location
     jest.resetModules();
-    db = require('../../src/persistence/sqlite');
+    db = (await import('../../src/persistence/sqlite')).default;
 
     // Réinitialiser la base de données pour chaque test
     await db.init();
@@ -49,7 +49,7 @@ afterAll(async () => {
         if (location && fs.existsSync(location)) {
             fs.unlinkSync(location);
         }
-    } catch (err) {
+    } catch {
         // Ignorer les erreurs de nettoyage
     }
 });

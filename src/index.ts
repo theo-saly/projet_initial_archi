@@ -1,10 +1,14 @@
-const express = require('express');
+import express from 'express';
+import db from './persistence';
+import routes from './routes/routes';
+import authRouter from './routes/auth';
+
 const app = express();
-const db = require('./persistence');
-const routes = require('./routes/routes');
 
 app.use(express.json());
 app.use(express.static(__dirname + '/static'));
+
+app.use('/auth', authRouter);
 
 routes(app);
 
@@ -23,4 +27,4 @@ const gracefulShutdown = () => {
 
 process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
-process.on('SIGUSR2', gracefulShutdown); // Sent by nodemon
+process.on('SIGUSR2', gracefulShutdown);
