@@ -56,7 +56,7 @@ function UserProfile() {
         <div className="card mt-3">
             <div className="card-header">Profil utilisateur</div>
             <div className="card-body">
-                <form onSubmit={register} className="mb-3">
+                <form id="register-form" onSubmit={register} className="mb-3">
                     <div className="form-group">
                         <label>Email</label>
                         <input type="email" className="form-control" value={registerEmail} onChange={e => setRegisterEmail(e.target.value)} required />
@@ -73,7 +73,7 @@ function UserProfile() {
                     {registerMessage && <div className="mt-2 text-info">{registerMessage}</div>}
                 </form>
 
-                <form onSubmit={login} className="mb-3">
+                <form id="login-form" onSubmit={login} className="mb-3">
                     <div className="form-group">
                         <label>Email</label>
                         <input type="email" className="form-control" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} required />

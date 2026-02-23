@@ -1,51 +1,52 @@
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 
 const BASE_URL = 'http://localhost:3000';
 
-// Fonction pour delete tt todos
-async function clearAllTodos(page) {
-  while (await page.locator('.item .fa-trash').count() > 0) {
-    const firstTrash = page.locator('.item .fa-trash').first();
-    await firstTrash.click();
-    await firstTrash.waitFor({ state: 'detached', timeout: 1000 });
-  }
-}
+
 
 test.describe('Todo List E2E', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto(BASE_URL);
-    await clearAllTodos(page);
-  });
   test('Ajout d’un todo', async ({ page }) => {
     await page.goto(BASE_URL);
-    await page.fill('input[placeholder="New Item"]', 'Ma première tâche');
+    await page.fill('input[placeholder="New Item"]', 'Test');
     await page.click('button.btn-success:not([disabled])');
-    await expect(page.locator('.item .name', { hasText: 'Ma première tâche' }).first()).toBeVisible();
+    await expect(page.locator('.item .name', { hasText: 'Test' }).first()).toBeVisible();
   });
 
   test('Compléter un todo', async ({ page }) => {
     await page.goto(BASE_URL);
-    await page.fill('input[placeholder="New Item"]', 'À compléter');
-    await page.click('button.btn-success:not([disabled])');
-    await page.click('.item:has(.name:text("À compléter")) .toggles');
-    await expect(page.locator('.item.completed .name', { hasText: 'À compléter' })).toBeVisible();
+    await page.click('.item:has(.name:text("Test")) .toggles');
+    await expect(page.locator('.item.completed .name', { hasText: 'Test' })).toBeVisible();
   });
 
   test('Décocher un todo', async ({ page }) => {
     await page.goto(BASE_URL);
-    await page.fill('input[placeholder="New Item"]', 'À décocher');
-    await page.click('button.btn-success:not([disabled])');
-    await page.click('.item:has(.name:has-text("À décocher")) .toggles');
-    await page.click('.item:has(.name:has-text("À décocher")) .toggles');
-    await expect(page.locator('.item:not(.false) .name', { hasText: 'À décocher' })).toBeVisible();
+    await page.click('.item:has(.name:has-text("Test")) .toggles');
+    await expect(page.locator('.item:not(.false) .name', { hasText: 'Test' })).toBeVisible();
   });
 
   test('Supprimer un todo', async ({ page }) => {
     await page.goto(BASE_URL);
-    await page.fill('input[placeholder="New Item"]', 'À supprimer');
-    await page.click('button.btn-success:not([disabled])');
-    await page.click('.item:has(.name:text("À supprimer")) .fa-trash');
-    await expect(page.locator('.item .name', { hasText: 'À supprimer' })).toHaveCount(0);
+    await page.click('.item:has(.name:text("Test")) .fa-trash');
+    await expect(page.locator('.item .name', { hasText: 'Test' })).toHaveCount(0);
+  });
+
+  test('Inscription utilisateur', async ({ page }) => {
+    await page.goto(BASE_URL);
+    const registerForm = page.locator('#register-form');
+    await registerForm.locator('input[type="email"]').fill('email@exemple.com');
+    await registerForm.locator('input[type="password"]').fill('motdepasse');
+    await registerForm.locator('#consentCheck').check();
+    await registerForm.locator('button.btn-primary').click();
+    await expect(registerForm.locator('.mt-2.text-info')).toHaveText('Compte créé !');
+  });
+
+  test('Connexion utilisateur', async ({ page }) => {
+    await page.goto(BASE_URL);
+    const loginForm = page.locator('#login-form');
+    await loginForm.locator('input[type="email"]').fill('email@exemple.com');
+    await loginForm.locator('input[type="password"]').fill('motdepasse');
+    await loginForm.locator('button.btn-success').click();
+    await expect(page.locator('input[placeholder="Token JWT"]')).not.toHaveValue('');
   });
 });
