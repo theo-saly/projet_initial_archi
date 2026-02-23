@@ -1,13 +1,14 @@
 import type { TodoItem, TodoRepository } from './TodoRepository';
+import path from 'path';
 
-const sqlite3 = require('sqlite3').verbose();
-const fs = require('fs');
+import sqlite3 from 'sqlite3';
+import fs from 'fs';
 const location = process.env.SQLITE_DB_LOCATION || '/etc/todos/todo.db';
 
-let db, dbAll, dbRun;
+let db;
 
 function init() {
-    const dirName = require('path').dirname(location);
+    const dirName = path.dirname(location);
     if (!fs.existsSync(dirName)) {
         fs.mkdirSync(dirName, { recursive: true });
     }
@@ -21,7 +22,7 @@ function init() {
 
             db.run(
                 'CREATE TABLE IF NOT EXISTS todo_items (id varchar(36), name varchar(255), completed boolean)',
-                (err, result) => {
+                (err) => {
                     if (err) return rej(err);
                     acc();
                 },
@@ -39,12 +40,13 @@ async function teardown() {
     });
 }
 
+
 async function getItems(): Promise<TodoItem[]> {
     return new Promise((acc, rej) => {
         db.all('SELECT * FROM todo_items', (err, rows) => {
             if (err) return rej(err);
             acc(
-                rows.map((item: any) =>
+                rows.map((item: Record<string, unknown>) =>
                     Object.assign({}, item, {
                         completed: item.completed === 1,
                     }),
@@ -58,7 +60,7 @@ async function getItem(id: string): Promise<TodoItem | undefined> {
     return new Promise((acc, rej) => {
         db.all('SELECT * FROM todo_items WHERE id=?', [id], (err, rows) => {
             if (err) return rej(err);
-            const mapped = rows.map((item: any) =>
+            const mapped = rows.map((item: Record<string, unknown>) =>
                 Object.assign({}, item, {
                     completed: item.completed === 1,
                 })
@@ -113,4 +115,4 @@ const repository: TodoRepository = {
     removeItem,
 };
 
-module.exports = repository;
+export default repository;

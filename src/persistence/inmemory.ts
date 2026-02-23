@@ -44,4 +44,4 @@ const repository: TodoRepository = {
     removeItem,
 };
 
-module.exports = repository;
+export default repository;

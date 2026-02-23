@@ -1,6 +1,5 @@
-const db = require('../../src/persistence');
-const deleteItem = require('../../src/controllers/deleteItem');
-const ITEM = { id: 12345 };
+import db from '../../src/persistence';
+import deleteItem from '../../src/controllers/deleteItem';
 
 jest.mock('../../src/persistence', () => ({
     removeItem: jest.fn(),
@@ -13,8 +12,8 @@ test('it removes item correctly', async () => {
 
     await deleteItem(req, res);
 
-    expect(db.removeItem.mock.calls.length).toBe(1);
-    expect(db.removeItem.mock.calls[0][0]).toBe(req.params.id);
+    expect((db.removeItem as jest.Mock).mock.calls.length).toBe(1);
+    expect((db.removeItem as jest.Mock).mock.calls[0][0]).toBe(req.params.id);
     expect(res.sendStatus.mock.calls[0].length).toBe(1);
     expect(res.sendStatus.mock.calls[0][0]).toBe(200);
 });

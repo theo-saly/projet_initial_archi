@@ -26,7 +26,6 @@ describe('Architecture: isolation de l\'infrastructure', () => {
 
         for (const file of testFiles) {
             const content = fs.readFileSync(file, 'utf-8');
-            const relative = path.relative(specDir, file);
 
             expect(content).not.toMatch(
                 /require\(\s*['"]sqlite3['"]\s*\)/,

@@ -33,7 +33,8 @@ export function authenticateUser(email: string, password: string): string | null
 export function getUserProfile(id: number): Omit<User, 'password'> | null {
   const user = users.find(u => u.id === id);
   if (!user) return null;
-  const { password, ...profile } = user;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { password: _password, ...profile } = user;
   return profile;
 }
 
