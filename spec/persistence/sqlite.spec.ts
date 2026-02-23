@@ -20,7 +20,7 @@ beforeEach(async () => {
         if (db && db.teardown) {
             await db.teardown();
         }
-    } catch (err: unknown) {
+    } catch {
         // Ignorer les erreurs si la base n'est pas ouverte
     }
 
@@ -49,7 +49,7 @@ afterAll(async () => {
         if (location && fs.existsSync(location)) {
             fs.unlinkSync(location);
         }
-    } catch (err) {
+    } catch {
         // Ignorer les erreurs de nettoyage
     }
 });
