@@ -13,6 +13,11 @@ test.describe('Todo List E2E', () => {
     await expect(page.locator('.item .name', { hasText: 'Test' }).first()).toBeVisible();
   });
 
+  test('Le champ est vidé après ajout', async ({ page }) => {
+    await page.goto(BASE_URL);
+    await expect(page.locator('input[placeholder="New Item"]')).toHaveValue('');
+  });
+
   test('Compléter un todo', async ({ page }) => {
     await page.goto(BASE_URL);
     await page.click('.item:has(.name:text("Test")) .toggles');
@@ -48,5 +53,15 @@ test.describe('Todo List E2E', () => {
     await loginForm.locator('input[type="password"]').fill('motdepasse');
     await loginForm.locator('button.btn-success').click();
     await expect(page.locator('input[placeholder="Token JWT"]')).not.toHaveValue('');
+  });
+
+  test('Suppression du compte utilisateur', async ({ page }) => {
+    await page.goto(BASE_URL);
+    const loginForm = page.locator('#login-form');
+    await loginForm.locator('input[type="email"]').fill('email@exemple.com');
+    await loginForm.locator('input[type="password"]').fill('motdepasse');
+    await loginForm.locator('button.btn-success').click();
+    await page.click('button.btn-danger:has-text("Supprimer mon compte")');
+    await expect(page.locator('input[placeholder="Token JWT"]')).toHaveValue('');
   });
 });
