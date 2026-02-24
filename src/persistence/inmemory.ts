@@ -11,11 +11,11 @@ async function teardown(): Promise<void> {
 }
 
 async function getItems(): Promise<TodoItem[]> {
-    return items.map(item => ({ ...item }));
+    return items.map((item) => ({ ...item }));
 }
 
 async function getItem(id: string): Promise<TodoItem | undefined> {
-    const item = items.find(i => i.id === id);
+    const item = items.find((i) => i.id === id);
     return item ? { ...item } : undefined;
 }
 
@@ -24,14 +24,14 @@ async function storeItem(item: TodoItem): Promise<void> {
 }
 
 async function updateItem(id: string, item: TodoItem): Promise<void> {
-    const index = items.findIndex(i => i.id === id);
+    const index = items.findIndex((i) => i.id === id);
     if (index !== -1) {
         items[index] = { ...item, id };
     }
 }
 
 async function removeItem(id: string): Promise<void> {
-    items = items.filter(i => i.id !== id);
+    items = items.filter((i) => i.id !== id);
 }
 
 const repository: TodoRepository = {
