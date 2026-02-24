@@ -14,7 +14,7 @@ function init() {
     }
 
     return new Promise<void>((acc, rej) => {
-        db = new sqlite3.Database(location, err => {
+        db = new sqlite3.Database(location, (err) => {
             if (err) return rej(err);
 
             if (process.env.NODE_ENV !== 'test')
@@ -33,13 +33,12 @@ function init() {
 
 async function teardown() {
     return new Promise<void>((acc, rej) => {
-        db.close(err => {
+        db.close((err) => {
             if (err) rej(err);
             else acc();
         });
     });
 }
-
 
 async function getItems(): Promise<TodoItem[]> {
     return new Promise((acc, rej) => {
@@ -63,7 +62,7 @@ async function getItem(id: string): Promise<TodoItem | undefined> {
             const mapped = rows.map((item: Record<string, unknown>) =>
                 Object.assign({}, item, {
                     completed: item.completed === 1,
-                })
+                }),
             ) as TodoItem[];
             acc(mapped[0]);
         });
@@ -75,7 +74,7 @@ async function storeItem(item) {
         db.run(
             'INSERT INTO todo_items (id, name, completed) VALUES (?, ?, ?)',
             [item.id, item.name, item.completed ? 1 : 0],
-            err => {
+            (err) => {
                 if (err) return rej(err);
                 acc();
             },
@@ -88,17 +87,17 @@ async function updateItem(id, item) {
         db.run(
             'UPDATE todo_items SET name=?, completed=? WHERE id = ?',
             [item.name, item.completed ? 1 : 0, id],
-            err => {
+            (err) => {
                 if (err) return rej(err);
                 acc();
             },
         );
     });
-} 
+}
 
 async function removeItem(id) {
     return new Promise<void>((acc, rej) => {
-        db.run('DELETE FROM todo_items WHERE id = ?', [id], err => {
+        db.run('DELETE FROM todo_items WHERE id = ?', [id], (err) => {
             if (err) return rej(err);
             acc();
         });

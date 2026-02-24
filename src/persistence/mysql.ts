@@ -20,7 +20,9 @@ let pool: mysql.Pool;
 async function init() {
     const host = HOST_FILE ? fs.readFileSync(HOST_FILE, 'utf-8') : HOST;
     const user = USER_FILE ? fs.readFileSync(USER_FILE, 'utf-8') : USER;
-    const password = PASSWORD_FILE ? fs.readFileSync(PASSWORD_FILE, 'utf-8') : PASSWORD;
+    const password = PASSWORD_FILE
+        ? fs.readFileSync(PASSWORD_FILE, 'utf-8')
+        : PASSWORD;
     const database = DB_FILE ? fs.readFileSync(DB_FILE, 'utf-8') : DB;
 
     await waitPort({
@@ -54,7 +56,7 @@ async function init() {
 
 async function teardown() {
     return new Promise<void>((acc, rej) => {
-        pool.end(err => {
+        pool.end((err) => {
             if (err) rej(err);
             else acc();
         });
@@ -67,7 +69,7 @@ async function getItems(): Promise<TodoItem[]> {
             if (err) return rej(err);
             const results = rows as mysql.RowDataPacket[];
             acc(
-                results.map(item => ({
+                results.map((item) => ({
                     id: item.id,
                     name: item.name,
                     completed: item.completed === 1,
@@ -82,7 +84,7 @@ async function getItem(id: string): Promise<TodoItem | undefined> {
         pool.query('SELECT * FROM todo_items WHERE id=?', [id], (err, rows) => {
             if (err) return rej(err);
             const results = rows as mysql.RowDataPacket[];
-            const mapped = results.map(item => ({
+            const mapped = results.map((item) => ({
                 id: item.id,
                 name: item.name,
                 completed: item.completed === 1,
