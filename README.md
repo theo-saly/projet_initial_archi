@@ -70,3 +70,7 @@ npm init @eslint/config
 ## ADR
 
 Les ADR se trouvent dans le dossier Documentions (décisions d'architecture)
+
+## Trello
+
+https://trello.com/b/uRypyONb/projetinitialarchi
