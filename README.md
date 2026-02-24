@@ -65,3 +65,8 @@ npm init @eslint/config
 | `MYSQL_USER/PASSWORD/DB` | Identifiants MySQL          | —                    |
 | `SQLITE_DB_LOCATION` | Chemin du fichier SQLite        | `/etc/todos/todo.db` |
 | `NODE_ENV=test`      | Active la persistance In-Memory | —                    |
+
+
+## ADR
+
+Les ADR se trouvent dans le dossier Documentions (décisions d'architecture)
