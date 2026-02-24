@@ -30,13 +30,6 @@ export function authenticateUser(email: string, password: string): string | null
   return jwt.sign({ id: user.id, email: user.email }, 'SECRET_KEY', { expiresIn: '1h' });
 }
 
-export function getUserProfile(id: number): Omit<User, 'password'> | null {
-  const user = users.find(u => u.id === id);
-  if (!user) return null;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password: _password, ...profile } = user;
-  return profile;
-}
 
 export function deleteUser(id: number): boolean {
   const index = users.findIndex(u => u.id === id);
