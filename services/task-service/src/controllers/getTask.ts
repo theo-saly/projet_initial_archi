@@ -1,6 +1,6 @@
 import db from '../persistence';
 
 export default async (req, res) => {
-    const items = await db.getItems();
-    res.send(items);
+    const tasks = await db.getTasks();
+    res.send(tasks);
 };

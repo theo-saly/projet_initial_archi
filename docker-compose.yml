@@ -1,12 +1,67 @@
 version: '3.8'
+
 services:
-  app:
-    build: .
+  auth-service:
+    build: ./services/auth-service
     ports:
-      - "3000:3000"
+      - "3001:3001"
     volumes:
-      - ./src:/app/src
-      - ./src/static:/app/src/static
+      - ./services/auth-service/src:/app/src
+      - auth-data:/app/data
+    environment:
+      - JWT_SECRET=SECRET_KEY
+      - SQLITE_DB_LOCATION=/app/data/auth.db
+
+  project-service:
+    build: ./services/project-service
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./services/project-service/src:/app/src
+      - project-data:/app/data
+    environment:
+      - JWT_SECRET=SECRET_KEY
+      - SQLITE_DB_LOCATION=/app/data/projects.db
+
+  task-service:
+    build: ./services/task-service
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./services/task-service/src:/app/src
+      - task-data:/app/data
+    environment:
+      - JWT_SECRET=SECRET_KEY
+      - SQLITE_DB_LOCATION=/app/data/tasks.db
+      - REDIS_HOST=redis
+
+  notification-service:
+    build: ./services/notification-service
+    ports:
+      - "3004:3004"
+    volumes:
+      - ./services/notification-service/src:/app/src
+      - notification-logs:/app/logs
+    environment:
+      - REDIS_HOST=redis
+      - LOG_FILE=/app/logs/notifications.log
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
 
 volumes:
-  mysql-data:
+  auth-data:
+  project-data:
+  task-data:
+  notification-logs:
