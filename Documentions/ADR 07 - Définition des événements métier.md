@@ -20,11 +20,6 @@ Définir un catalogue structuré d'événements avec un format standardisé :
 - TaskCompleted (task-service → notification-service) : tâche marquée "terminée"
 - TaskReopened (task-service → notification-service) : tâche réouverte
 
-Événements complémentaires :
-- TaskCreated : nouvelle tâche créée
-- TaskDeleted : tâche supprimée
-- ProjectCreated : nouveau projet créé
-
 Chaque événement suit le format : { eventId, eventType, timestamp, source, payload }. Les noms sont en PascalCase au passé (fait accompli). Les streams Redis sont nommés par contexte : tasks:events, projects:events. Le notification-service consomme ces événements et les écrit dans un fichier de log.
 
 ---
