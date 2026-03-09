@@ -14,6 +14,7 @@ export interface TaskRepository {
     teardown(): Promise<void>;
     getTasks(): Promise<Task[]>;
     getTask(id: string): Promise<Task | undefined>;
+    getTasksByProject(projectId: string): Promise<Task[]>;
     storeTask(task: Task): Promise<void>;
     updateTask(id: string, task: Task): Promise<void>;
     removeTask(id: string): Promise<void>;
