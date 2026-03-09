@@ -19,6 +19,10 @@ async function getTask(id: string): Promise<Task | undefined> {
     return task ? { ...task } : undefined;
 }
 
+async function getTasksByProject(projectId: string): Promise<Task[]> {
+    return tasks.filter((t) => t.projectId === projectId).map((t) => ({ ...t }));
+}
+
 async function storeTask(task: Task): Promise<void> {
     tasks.push({ ...task });
 }
@@ -39,6 +43,7 @@ const repository: TaskRepository = {
     teardown,
     getTasks,
     getTask,
+    getTasksByProject,
     storeTask,
     updateTask,
     removeTask,

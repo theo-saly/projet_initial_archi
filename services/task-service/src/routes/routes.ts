@@ -1,11 +1,13 @@
-import getItems from '../controllers/getTask';
-import addItem from '../controllers/addTask';
-import updateItem from '../controllers/updateTask';
-import deleteItem from '../controllers/deleteTask';
+import getTasks from '../controllers/getTask';
+import getTasksByProject from '../controllers/getTasksByProject';
+import addTask from '../controllers/addTask';
+import updateTask from '../controllers/updateTask';
+import deleteTask from '../controllers/deleteTask';
 
 export default (app) => {
-    app.get('/tasks', getItems);
-    app.post('/tasks', addItem);
-    app.put('/tasks/:id', updateItem);
-    app.delete('/tasks/:id', deleteItem);
+    app.get('/tasks', getTasks);
+    app.get('/tasks/by-project', getTasksByProject);
+    app.post('/tasks', addTask);
+    app.put('/tasks/:id', updateTask);
+    app.delete('/tasks/:id', deleteTask);
 };

@@ -58,6 +58,15 @@ async function getTask(id: string): Promise<Task | undefined> {
     });
 }
 
+async function getTasksByProject(projectId: string): Promise<Task[]> {
+    return new Promise((acc, rej) => {
+        db.all('SELECT * FROM tasks WHERE projectId=?', [projectId], (err, rows) => {
+            if (err) return rej(err);
+            acc(rows as Task[]);
+        });
+    });
+}
+
 async function storeTask(task: Task) {
     return new Promise<void>((acc, rej) => {
         db.run(
@@ -115,6 +124,7 @@ const repository: TaskRepository = {
     teardown,
     getTasks,
     getTask,
+    getTasksByProject,
     storeTask,
     updateTask,
     removeTask,
