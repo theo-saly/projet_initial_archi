@@ -6,6 +6,10 @@ jest.mock('../../src/persistence', () => ({
     updateProject: jest.fn(),
 }));
 
+jest.mock('../../src/events/publisher', () => ({
+    publishEvent: jest.fn(),
+}));
+
 const mockFetch = jest.fn();
 global.fetch = mockFetch as any;
 
