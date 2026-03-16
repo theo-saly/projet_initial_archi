@@ -46,6 +46,25 @@ npm run prettify                         # Formatage Prettier
 docker compose up --build                # Lancement Docker
 ```
 
+## Validation Front (workflow projet)
+
+Le frontend `http://localhost:3000` permet de valider le processus cible :
+
+1. Creation d'un projet
+2. Creation d'une tache associee au projet
+3. Passage de la tache en `termine`
+4. Cloture du projet, puis verification des logs de notification
+
+Commandes utiles :
+
+```bash
+npx playwright test tests-e2e/todo.spec.ts
+docker compose logs --no-color --tail=200 notification-service
+```
+
+Note: le frontend utilise un proxy nginx (`frontend/nginx.conf`) pour router
+`/projects` vers `project-service` et `/tasks` vers `task-service`.
+
 ## Mise à jour des dépendances
 
 ```bash

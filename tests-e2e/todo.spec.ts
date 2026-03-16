@@ -1,86 +1,191 @@
 import { test, expect } from '@playwright/test';
+import { execSync } from 'node:child_process';
 
 const BASE_URL = 'http://localhost:3000';
 
-test.describe('Todo List E2E', () => {
-    test('Ajout d’un todo', async ({ page }) => {
+test.describe('Workflow Front E2E', () => {
+    test('Inscription', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+
         await page.goto(BASE_URL);
-        await page.fill('input[placeholder="New Item"]', 'Test');
-        await page.click('button.btn-success:not([disabled])');
-        await expect(
-            page.locator('.item .name', { hasText: 'Test' }).first(),
-        ).toBeVisible();
+        await page.click('#landing-cta');
+        await expect(page.locator('#auth-card')).toBeVisible();
+
+        await page.click('button.auth-tab:has-text("Inscription")');
+        await page.fill('#register-form input[type="email"]', email);
+        await page.fill('#register-form input[type="password"]', password);
+        await page.check('#consentCheck');
+        await page.click('#register-form button[type="submit"]');
+        await expect(page.locator('#register-form .text-info')).toContainText(/Compte/i);
     });
 
-    test('Le champ est vidé après ajout', async ({ page }) => {
+    test('Connexion', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+
         await page.goto(BASE_URL);
-        await expect(page.locator('input[placeholder="New Item"]')).toHaveValue(
-            '',
-        );
+        await page.click('#landing-cta');
+        await expect(page.locator('#auth-card')).toBeVisible();
+
+        await page.click('button.auth-tab:has-text("Inscription")');
+        await page.fill('#register-form input[type="email"]', email);
+        await page.fill('#register-form input[type="password"]', password);
+        await page.check('#consentCheck');
+        await page.click('#register-form button[type="submit"]');
+
+        await page.click('button.auth-tab:has-text("Connexion")');
+        await page.fill('#login-form input[type="email"]', email);
+        await page.fill('#login-form input[type="password"]', password);
+        await page.click('#login-form button[type="submit"]');
+        await expect(page.locator('#dashboard-shell')).toBeVisible();
+        await expect(page.locator('#project-form')).toBeVisible();
     });
 
-    test('Compléter un todo', async ({ page }) => {
+    test('Creation projet', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+        const projectName = `Projet E2E ${seed}`;
+
         await page.goto(BASE_URL);
-        await page.click('.item:has(.name:text("Test")) .toggles');
-        await expect(
-            page.locator('.item.completed .name', { hasText: 'Test' }),
-        ).toBeVisible();
+        await page.click('#landing-cta');
+        await expect(page.locator('#auth-card')).toBeVisible();
+
+        await page.click('button.auth-tab:has-text("Inscription")');
+        await page.fill('#register-form input[type="email"]', email);
+        await page.fill('#register-form input[type="password"]', password);
+        await page.check('#consentCheck');
+        await page.click('#register-form button[type="submit"]');
+
+        await page.click('button.auth-tab:has-text("Connexion")');
+        await page.fill('#login-form input[type="email"]', email);
+        await page.fill('#login-form input[type="password"]', password);
+        await page.click('#login-form button[type="submit"]');
+        await expect(page.locator('#dashboard-shell')).toBeVisible();
+
+        await page.fill('#project-form input[placeholder="Ex: Refonte portail client"]', projectName);
+        await page.fill('#project-form input[placeholder="Objectif du projet"]', 'Validation du workflow complet');
+        await page.click('#project-form button[type="submit"]');
+        await expect(page.locator('.alert-success')).toContainText(/Projet cr[eé]é? avec succ[eè]s\.?/i);
     });
 
-    test('Décocher un todo', async ({ page }) => {
+    test('Creation tache', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+        const projectName = `Projet E2E ${seed}`;
+        const taskTitle = `Tache E2E ${seed}`;
+
         await page.goto(BASE_URL);
-        await page.click('.item:has(.name:has-text("Test")) .toggles');
-        await expect(
-            page.locator('.item:not(.false) .name', { hasText: 'Test' }),
-        ).toBeVisible();
+        await page.click('#landing-cta');
+        await expect(page.locator('#auth-card')).toBeVisible();
+
+        await page.click('button.auth-tab:has-text("Inscription")');
+        await page.fill('#register-form input[type="email"]', email);
+        await page.fill('#register-form input[type="password"]', password);
+        await page.check('#consentCheck');
+        await page.click('#register-form button[type="submit"]');
+
+        await page.click('button.auth-tab:has-text("Connexion")');
+        await page.fill('#login-form input[type="email"]', email);
+        await page.fill('#login-form input[type="password"]', password);
+        await page.click('#login-form button[type="submit"]');
+        await expect(page.locator('#dashboard-shell')).toBeVisible();
+
+        await page.fill('#project-form input[placeholder="Ex: Refonte portail client"]', projectName);
+        await page.fill('#project-form input[placeholder="Objectif du projet"]', 'Validation du workflow complet');
+        await page.click('#project-form button[type="submit"]');
+        await expect(page.locator('.alert-success')).toContainText(/Projet cr[eé]é? avec succ[eè]s\.?/i);
+
+        await page.fill('#task-form input[placeholder="Ex: Designer la page d\'accueil"]', taskTitle);
+        await page.fill('#task-form input[placeholder="Details de la tache"]', 'Realiser la premiere tache du projet');
+        await page.click('#task-form button[type="submit"]');
+        await expect(page.locator('#task-list .item strong', { hasText: taskTitle })).toBeVisible();
     });
 
-    test('Supprimer un todo', async ({ page }) => {
+    test('Completion tache', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+        const projectName = `Projet E2E ${seed}`;
+        const taskTitle = `Tache E2E ${seed}`;
+
         await page.goto(BASE_URL);
-        await page.click('.item:has(.name:text("Test")) .fa-trash');
-        await expect(
-            page.locator('.item .name', { hasText: 'Test' }),
-        ).toHaveCount(0);
+        await page.click('#landing-cta');
+        await expect(page.locator('#auth-card')).toBeVisible();
+
+        await page.click('button.auth-tab:has-text("Inscription")');
+        await page.fill('#register-form input[type="email"]', email);
+        await page.fill('#register-form input[type="password"]', password);
+        await page.check('#consentCheck');
+        await page.click('#register-form button[type="submit"]');
+
+        await page.click('button.auth-tab:has-text("Connexion")');
+        await page.fill('#login-form input[type="email"]', email);
+        await page.fill('#login-form input[type="password"]', password);
+        await page.click('#login-form button[type="submit"]');
+        await expect(page.locator('#dashboard-shell')).toBeVisible();
+
+        await page.fill('#project-form input[placeholder="Ex: Refonte portail client"]', projectName);
+        await page.fill('#project-form input[placeholder="Objectif du projet"]', 'Validation du workflow complet');
+        await page.click('#project-form button[type="submit"]');
+        await expect(page.locator('.alert-success')).toContainText(/Projet cr[eé]é? avec succ[eè]s\.?/i);
+
+        await page.fill('#task-form input[placeholder="Ex: Designer la page d\'accueil"]', taskTitle);
+        await page.fill('#task-form input[placeholder="Details de la tache"]', 'Realiser la premiere tache du projet');
+        await page.click('#task-form button[type="submit"]');
+        await expect(page.locator('#task-list .item strong', { hasText: taskTitle })).toBeVisible();
+
+        await page.click(`#task-list .item:has(strong:has-text("${taskTitle}")) button`);
+        await expect(page.locator('#task-list .item .text-muted', { hasText: 'Statut: terminé' })).toBeVisible();
     });
 
-    test('Inscription utilisateur', async ({ page }) => {
+    test('Suppr un projet (cloture projet)', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+        const projectName = `Projet E2E ${seed}`;
+        const taskTitle = `Tache E2E ${seed}`;
+
         await page.goto(BASE_URL);
-        const registerForm = page.locator('#register-form');
-        await registerForm
-            .locator('input[type="email"]')
-            .fill('email@exemple.com');
-        await registerForm.locator('input[type="password"]').fill('motdepasse');
-        await registerForm.locator('#consentCheck').check();
-        await registerForm.locator('button.btn-primary').click();
-        await expect(registerForm.locator('.mt-2.text-info')).toHaveText(
-            'Compte créé !',
-        );
+        await page.click('#landing-cta');
+        await expect(page.locator('#auth-card')).toBeVisible();
+
+        await page.click('button.auth-tab:has-text("Inscription")');
+        await page.fill('#register-form input[type="email"]', email);
+        await page.fill('#register-form input[type="password"]', password);
+        await page.check('#consentCheck');
+        await page.click('#register-form button[type="submit"]');
+
+        await page.click('button.auth-tab:has-text("Connexion")');
+        await page.fill('#login-form input[type="email"]', email);
+        await page.fill('#login-form input[type="password"]', password);
+        await page.click('#login-form button[type="submit"]');
+        await expect(page.locator('#dashboard-shell')).toBeVisible();
+
+        await page.fill('#project-form input[placeholder="Ex: Refonte portail client"]', projectName);
+        await page.fill('#project-form input[placeholder="Objectif du projet"]', 'Validation du workflow complet');
+        await page.click('#project-form button[type="submit"]');
+        await expect(page.locator('.alert-success')).toContainText(/Projet cr[eé]é? avec succ[eè]s\.?/i);
+
+        await page.fill('#task-form input[placeholder="Ex: Designer la page d\'accueil"]', taskTitle);
+        await page.fill('#task-form input[placeholder="Details de la tache"]', 'Realiser la premiere tache du projet');
+        await page.click('#task-form button[type="submit"]');
+        await expect(page.locator('#task-list .item strong', { hasText: taskTitle })).toBeVisible();
+
+        await page.click(`#task-list .item:has(strong:has-text("${taskTitle}")) button`);
+        await page.click('#close-project button');
+        await expect(page.locator('.alert-success')).toContainText(/Projet cl[oô]tur[eé]/i);
     });
 
-    test('Connexion utilisateur', async ({ page }) => {
-        await page.goto(BASE_URL);
-        const loginForm = page.locator('#login-form');
-        await loginForm
-            .locator('input[type="email"]')
-            .fill('email@exemple.com');
-        await loginForm.locator('input[type="password"]').fill('motdepasse');
-        await loginForm.locator('button.btn-success').click();
-        await expect(
-            page.locator('input[placeholder="Token JWT"]'),
-        ).not.toHaveValue('');
-    });
+    test('Check log notification-service', async () => {
+        const logs = execSync('docker compose logs --no-color --tail=200 notification-service', {
+            encoding: 'utf-8',
+        });
 
-    test('Suppression du compte utilisateur', async ({ page }) => {
-        await page.goto(BASE_URL);
-        const loginForm = page.locator('#login-form');
-        await loginForm
-            .locator('input[type="email"]')
-            .fill('email@exemple.com');
-        await loginForm.locator('input[type="password"]').fill('motdepasse');
-        await loginForm.locator('button.btn-success').click();
-        await page.click('button.btn-danger:has-text("Supprimer mon compte")');
-        await expect(
-            page.locator('input[placeholder="Token JWT"]'),
-        ).toHaveValue('');
+        expect(logs).toContain('Notification service listening on port 3004');
     });
 });
