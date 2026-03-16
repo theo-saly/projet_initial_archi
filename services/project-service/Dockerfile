@@ -5,7 +5,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-COPY . .
+COPY tsconfig.json ./
+COPY src ./src
+COPY spec ./spec
 
 EXPOSE 3002
 
