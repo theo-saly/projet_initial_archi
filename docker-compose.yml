@@ -21,6 +21,9 @@ services:
             - JWT_SECRET=SECRET_KEY
             - SQLITE_DB_LOCATION=/app/data/projects.db
             - TASK_SERVICE_URL=http://task-service:3003
+            - REDIS_HOST=redis
+        depends_on:
+            - redis
 
     task-service:
         build: ./services/task-service
@@ -33,6 +36,8 @@ services:
             - JWT_SECRET=SECRET_KEY
             - SQLITE_DB_LOCATION=/app/data/tasks.db
             - REDIS_HOST=redis
+        depends_on:
+            - redis
 
     notification-service:
         build: ./services/notification-service

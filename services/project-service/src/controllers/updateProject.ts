@@ -1,4 +1,5 @@
 import db from '../persistence';
+import { publishEvent } from '../events/publisher';
 
 interface TaskDTO {
     id: string;
@@ -48,6 +49,14 @@ export default async (req, res) => {
         ownerId: project.ownerId,
         updatedAt: new Date(),
     });
+
+    if (newStatus === 'terminé' && project.status !== 'terminé') {
+        await publishEvent('ProjectCompleted', {
+            projectId: req.params.id,
+            projectName: project.name,
+            ownerId: project.ownerId,
+        });
+    }
 
     const updated = await db.getProject(req.params.id);
     res.send(updated);
