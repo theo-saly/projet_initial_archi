@@ -5,6 +5,7 @@ import deleteProject from '../controllers/deleteProject';
 
 export default (app) => {
     app.get('/projects', getProjects);
+    app.get('/projects/:id', getProjects);
     app.post('/projects', addProject);
     app.put('/projects/:id', updateProject);
     app.delete('/projects/:id', deleteProject);

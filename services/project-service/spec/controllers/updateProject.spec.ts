@@ -28,6 +28,7 @@ test('use case 4 : clôturer un projet quand toutes les tâches sont terminées'
         .mockResolvedValueOnce({ ...PROJECT, status: 'terminé' });
 
     mockFetch.mockResolvedValue({
+        ok: true,
         json: async () => [
             { id: 't1', status: 'terminé' },
             { id: 't2', status: 'terminé' },
@@ -47,6 +48,7 @@ test('use case 4 : refuser la clôture si des tâches ne sont pas terminées', a
     (db.getProject as jest.Mock).mockResolvedValueOnce(PROJECT);
 
     mockFetch.mockResolvedValue({
+        ok: true,
         json: async () => [
             { id: 't1', status: 'terminé' },
             { id: 't2', status: 'en cours' },
@@ -69,6 +71,7 @@ test('use case 4 : refuser la clôture si le projet n\'a aucune tâche', async (
     (db.getProject as jest.Mock).mockResolvedValueOnce(PROJECT);
 
     mockFetch.mockResolvedValue({
+        ok: true,
         json: async () => [],
     });
 
