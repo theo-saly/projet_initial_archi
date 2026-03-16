@@ -2,16 +2,17 @@ import db from '../persistence';
 import { v4 as uuid } from 'uuid';
 
 export default async (req, res) => {
-    const task = {
+    const project = {
         id: uuid(),
-        title: req.body.title,
+        name: req.body.name,
         description: req.body.description,
-        status: req.body.status,
+        status: req.body.status || 'à faire',
         echeance: req.body.echeance,
-        projectId: req.body.projectId,
+        ownerId: req.user?.id || req.body.ownerId || 'default',
         createdAt: new Date(),
+        updatedAt: new Date(),
     };
 
-    await db.storeTask(task);
-    res.send(task);
+    await db.storeProject(project);
+    res.status(201).send(project);
 };

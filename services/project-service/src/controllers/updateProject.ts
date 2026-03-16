@@ -1,5 +1,10 @@
 import db from '../persistence';
 
+interface TaskDTO {
+    id: string;
+    status: string;
+}
+
 const TASK_SERVICE_URL = process.env.TASK_SERVICE_URL;
 
 export default async (req, res) => {
@@ -15,7 +20,10 @@ export default async (req, res) => {
             const response = await fetch(
                 `${TASK_SERVICE_URL}/tasks/by-project?projectId=${req.params.id}`,
             );
-            const tasks = await response.json();
+            if (!response.ok) {
+                return res.status(503).json({ error: 'Service des tâches indisponible' });
+            }
+            const tasks = await response.json() as TaskDTO[];
 
             if (tasks.length === 0) {
                 return res.status(400).json({ error: 'Aucune tâche dans ce projet' });
