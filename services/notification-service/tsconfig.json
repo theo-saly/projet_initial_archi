@@ -6,16 +6,12 @@
         "outDir": "./dist",
         "rootDir": "./src",
         "strict": false,
-        "allowJs": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true,
-        "declaration": true,
-        "declarationMap": true,
-        "sourceMap": true,
-        "moduleDetection": "force"
+        "sourceMap": true
     },
-    "include": ["src/**/*", "services/task-service/index.ts", "frontend"],
-    "exclude": ["node_modules", "dist", "spec", "tests-e2e", "coverage", "frontend"],
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist"]
 }
