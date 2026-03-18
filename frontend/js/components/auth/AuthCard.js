@@ -1,59 +1,65 @@
 function AuthCard({ initialTab, setToken, onAuthenticated, onBack }) {
-    const [registerEmail, setRegisterEmail] = React.useState('');
-    const [registerPassword, setRegisterPassword] = React.useState('');
-    const [registerConsent, setRegisterConsent] = React.useState(false);
-    const [registerMessage, setRegisterMessage] = React.useState('');
+    const [tab, setTab] = React.useState(initialTab || 'login');
+    
+    const [login, setLogin] = React.useState({ email: '', password: '', message: '' });
+    const [register, setRegister] = React.useState({ 
+        email: '', 
+        password: '', 
+        consent: false, 
+        message: '' 
+    });
 
-    const [loginEmail, setLoginEmail] = React.useState('');
-    const [loginPassword, setLoginPassword] = React.useState('');
-    const [loginMessage, setLoginMessage] = React.useState('');
-    const [activeTab, setActiveTab] = React.useState(initialTab || 'login');
-
-    React.useEffect(() => {
-        setActiveTab(initialTab || 'login');
-    }, [initialTab]);
-
-    const register = async (e) => {
-        e.preventDefault();
-        setRegisterMessage('');
-        try {
-            const res = await fetch('/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: registerEmail,
-                    password: registerPassword,
-                    consent: registerConsent,
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.error || 'Erreur inscription');
-            }
-            setRegisterMessage('Compte cree avec succes.');
-        } catch (err) {
-            setRegisterMessage(err.message);
-        }
+    const updateLogin = (field, value) => {
+        setLogin(prev => ({ ...prev, [field]: value }));
     };
 
-    const login = async (e) => {
+    const updateRegister = (field, value) => {
+        setRegister(prev => ({ ...prev, [field]: value }));
+    };
+
+    // Soumission
+    const handleLogin = async (e) => {
         e.preventDefault();
-        setLoginMessage('');
+        setLogin(prev => ({ ...prev, message: '' }));
         try {
             const res = await fetch('/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+                body: JSON.stringify({ email: login.email, password: login.password }),
             });
             const data = await res.json();
             if (!res.ok || !data.token) {
                 throw new Error(data.error || 'Erreur connexion');
             }
             setToken(data.token);
-            setLoginMessage('Connexion reussie.');
+            setLogin(prev => ({ ...prev, message: 'Connexion reussie.' }));
             if (onAuthenticated) onAuthenticated();
         } catch (err) {
-            setLoginMessage(err.message);
+            setLogin(prev => ({ ...prev, message: err.message }));
+        }
+    };
+
+    // Soumission 
+    const handleRegister = async (e) => {
+        e.preventDefault();
+        setRegister(prev => ({ ...prev, message: '' }));
+        try {
+            const res = await fetch('/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: register.email,
+                    password: register.password,
+                    consent: register.consent,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Erreur inscription');
+            }
+            setRegister(prev => ({ ...prev, message: 'Compte cree avec succes.' }));
+        } catch (err) {
+            setRegister(prev => ({ ...prev, message: err.message }));
         }
     };
 
@@ -66,33 +72,34 @@ function AuthCard({ initialTab, setToken, onAuthenticated, onBack }) {
                         Retour a l'accueil
                     </button>
                 )}
+                
                 <div className="auth-tabs mb-3">
                     <button
                         type="button"
-                        className={`auth-tab ${activeTab === 'login' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('login')}
+                        className={`auth-tab ${tab === 'login' ? 'active' : ''}`}
+                        onClick={() => setTab('login')}
                     >
                         Connexion
                     </button>
                     <button
                         type="button"
-                        className={`auth-tab ${activeTab === 'register' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('register')}
+                        className={`auth-tab ${tab === 'register' ? 'active' : ''}`}
+                        onClick={() => setTab('register')}
                     >
                         Inscription
                     </button>
                 </div>
 
-                {activeTab === 'login' && (
-                    <form id="login-form" onSubmit={login} className="mb-0">
+                {tab === 'login' && (
+                    <form id="login-form" onSubmit={handleLogin} className="mb-0">
                         <h5>Connexion</h5>
                         <div className="form-group">
                             <label>Email</label>
                             <input
                                 type="email"
                                 className="form-control"
-                                value={loginEmail}
-                                onChange={(e) => setLoginEmail(e.target.value)}
+                                value={login.email}
+                                onChange={(e) => updateLogin('email', e.target.value)}
                                 required
                             />
                         </div>
@@ -101,26 +108,26 @@ function AuthCard({ initialTab, setToken, onAuthenticated, onBack }) {
                             <input
                                 type="password"
                                 className="form-control"
-                                value={loginPassword}
-                                onChange={(e) => setLoginPassword(e.target.value)}
+                                value={login.password}
+                                onChange={(e) => updateLogin('password', e.target.value)}
                                 required
                             />
                         </div>
                         <button type="submit" className="btn btn-success btn-block">Se connecter</button>
-                        {loginMessage && <div className="mt-2 text-info">{loginMessage}</div>}
+                        {login.message && <div className="mt-2 text-info">{login.message}</div>}
                     </form>
                 )}
 
-                {activeTab === 'register' && (
-                    <form id="register-form" onSubmit={register} className="mb-0">
+                {tab === 'register' && (
+                    <form id="register-form" onSubmit={handleRegister} className="mb-0">
                         <h5>Inscription</h5>
                         <div className="form-group">
                             <label>Email</label>
                             <input
                                 type="email"
                                 className="form-control"
-                                value={registerEmail}
-                                onChange={(e) => setRegisterEmail(e.target.value)}
+                                value={register.email}
+                                onChange={(e) => updateRegister('email', e.target.value)}
                                 required
                             />
                         </div>
@@ -129,8 +136,8 @@ function AuthCard({ initialTab, setToken, onAuthenticated, onBack }) {
                             <input
                                 type="password"
                                 className="form-control"
-                                value={registerPassword}
-                                onChange={(e) => setRegisterPassword(e.target.value)}
+                                value={register.password}
+                                onChange={(e) => updateRegister('password', e.target.value)}
                                 required
                             />
                         </div>
@@ -139,15 +146,15 @@ function AuthCard({ initialTab, setToken, onAuthenticated, onBack }) {
                                 type="checkbox"
                                 className="form-check-input"
                                 id="consentCheck"
-                                checked={registerConsent}
-                                onChange={(e) => setRegisterConsent(e.target.checked)}
+                                checked={register.consent}
+                                onChange={(e) => updateRegister('consent', e.target.checked)}
                             />
                             <label className="form-check-label" htmlFor="consentCheck">
                                 J&apos;accepte le traitement de mes donnees
                             </label>
                         </div>
                         <button type="submit" className="btn btn-primary btn-block">Creer mon compte</button>
-                        {registerMessage && <div className="mt-2 text-info">{registerMessage}</div>}
+                        {register.message && <div className="mt-2 text-info">{register.message}</div>}
                     </form>
                 )}
             </div>

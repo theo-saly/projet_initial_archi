@@ -1,20 +1,16 @@
 function AuthPage({ authTab, setToken, navigate }) {
-    const { Container, Row, Col } = ReactBootstrap;
-
     return (
-        <Container fluid className="app-shell page-auth px-0">
-            <section className="fullscreen-page auth-page">
-                <Row>
-                    <Col lg={{ offset: 2, span: 8 }}>
-                        <AuthCard
-                            initialTab={authTab}
-                            setToken={setToken}
-                            onAuthenticated={() => navigate('/dashboard')}
-                            onBack={() => navigate('/')}
-                        />
-                    </Col>
-                </Row>
+        <div className="app-shell page-auth px-0" style={{ minHeight: '100vh' }}>
+            <section className="fullscreen-page auth-page d-flex align-items-center justify-content-center">
+                <div style={{ maxWidth: '500px', width: '100%' }} className="px-4">
+                    <AuthCard
+                        initialTab={authTab}
+                        setToken={setToken}
+                        onAuthenticated={() => navigate('/dashboard')}
+                        onBack={() => navigate('/')}
+                    />
+                </div>
             </section>
-        </Container>
+        </div>
     );
 }
