@@ -17,10 +17,9 @@ function HomePage({ navigate, message }) {
             </div>
 
             <div className="d-flex gap-5 py-4 flex-grow-1">
-
                 <div style={{ flex: 1 }} className="d-flex flex-column gap-3">
                     <div>
-                        <div className="badge bg-success text-white fw-bold text-uppercase mb-2" style={{ fontSize: '0.75rem', letterSpacing: '0.08em' }}>
+                        <div className="badge bg-success text-white fw-bold text-uppercase mb-2" style={{ marginTop: '100px', fontSize: '0.75rem', letterSpacing: '0.08em' }}>
                             Par Saly Théo &amp; Inacio Rodrigues
                         </div>
                         <h1 className="fw-bold" style={{ fontSize: '3rem', color: '#0b2239' }}>
@@ -51,32 +50,6 @@ function HomePage({ navigate, message }) {
                     </div>
 
                     {message && <div className="alert alert-success mb-0">{message}</div>}
-                </div>
-
-                <div style={{ flex: 1 }} className="card shadow-lg" style={{ borderRadius: '18px', background: 'linear-gradient(160deg,#fff,#f0f7ff)' }}>
-                    <div className="card-body p-4">
-                        <div className="mb-3">
-                            <div className="badge bg-secondary text-uppercase fw-bold" style={{ letterSpacing: '0.08em', fontSize: '0.7rem' }}>
-                                Aperçu du dashboard
-                            </div>
-                        </div>
-
-                        <div className="progress mb-3" style={{ height: '8px' }}>
-                            <div className="progress-bar bg-success" style={{ width: '66%' }} />
-                        </div>
-
-                        <div className="d-flex flex-column gap-2">
-                            <div className="rounded border border-success bg-light text-success px-3 py-2" style={{ fontSize: '0.88rem' }}>
-                                ✓ Page d&apos;accueil validée
-                            </div>
-                            <div className="rounded border px-3 py-2 bg-white" style={{ fontSize: '0.88rem', color: '#224363' }}>
-                                Connexion sécurisée
-                            </div>
-                            <div className="rounded border px-3 py-2 bg-white" style={{ fontSize: '0.88rem', color: '#224363' }}>
-                                Projets et tâches
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
