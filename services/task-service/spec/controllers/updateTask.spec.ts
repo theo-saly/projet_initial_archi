@@ -6,6 +6,14 @@ jest.mock('../../src/persistence', () => ({
     updateTask: jest.fn(),
 }));
 
+jest.mock('../../src/events/publisher', () => ({
+    publishEvent: jest.fn(),
+}));
+
+beforeEach(() => {
+    jest.clearAllMocks();
+});
+
 test('use case 3 : marquer une tâche comme terminée', async () => {
     const existingTask = {
         id: 'task-1',
@@ -15,7 +23,6 @@ test('use case 3 : marquer une tâche comme terminée', async () => {
         echeance: null,
         projectId: 'proj-1',
     };
-    (db.getTask as jest.Mock).mockResolvedValue({ ...existingTask, status: 'terminé' });
 
     const req = { params: { id: 'task-1' }, body: { status: 'terminé' } };
     const res = { send: jest.fn(), status: jest.fn().mockReturnThis(), json: jest.fn() };

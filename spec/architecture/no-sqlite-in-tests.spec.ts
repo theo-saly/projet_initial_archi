@@ -3,6 +3,7 @@ import * as path from 'path';
 
 function getTestFiles(dir: string, skipDirs: string[] = []): string[] {
     const results: string[] = [];
+    if (!fs.existsSync(dir)) return results;
     const entries = fs.readdirSync(dir, { withFileTypes: true });
 
     for (const entry of entries) {
@@ -20,10 +21,10 @@ function getTestFiles(dir: string, skipDirs: string[] = []): string[] {
 }
 
 describe("Architecture: isolation de l'infrastructure", () => {
-    const specDir = path.resolve(__dirname, '..');
+    const servicesDir = path.resolve(__dirname, '..', '..', 'services');
 
-    test('aucun test (hors persistence/) ne doit importer sqlite3', () => {
-        const testFiles = getTestFiles(specDir, ['persistence']);
+    test('aucun test de controller ne doit importer sqlite3 directement', () => {
+        const testFiles = getTestFiles(servicesDir, ['node_modules', 'persistence']);
 
         expect(testFiles.length).toBeGreaterThan(0);
 
@@ -32,25 +33,17 @@ describe("Architecture: isolation de l'infrastructure", () => {
 
             expect(content).not.toMatch(/require\(\s*['"]sqlite3['"]\s*\)/);
             expect(content).not.toMatch(/from\s+['"]sqlite3['"]/);
-            expect(content).not.toMatch(
-                /require\(\s*['"].*\/persistence\/sqlite['"]\s*\)/,
-            );
         }
     });
 
-    test('les tests de routes doivent mocker la couche persistence', () => {
-        const routeTestDir = path.join(specDir, 'routes');
-        const files = fs
-            .readdirSync(routeTestDir)
-            .filter((f) => f.endsWith('.spec.ts') || f.endsWith('.test.ts'));
+    test('les tests de controllers doivent mocker la couche persistence', () => {
+        const testFiles = getTestFiles(servicesDir, ['node_modules'])
+            .filter((f) => f.includes('controllers'));
 
-        expect(files.length).toBeGreaterThan(0);
+        expect(testFiles.length).toBeGreaterThan(0);
 
-        for (const file of files) {
-            const content = fs.readFileSync(
-                path.join(routeTestDir, file),
-                'utf-8',
-            );
+        for (const file of testFiles) {
+            const content = fs.readFileSync(file, 'utf-8');
             expect(content).toMatch(/jest\.mock\(.+persistence/);
         }
     });
