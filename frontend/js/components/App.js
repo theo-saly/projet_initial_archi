@@ -1,51 +1,49 @@
 function App() {
     const [token, setToken] = React.useState(() => localStorage.getItem('authToken') || '');
-    const [currentPath, setCurrentPath] = React.useState(() => normalizePath(window.location.pathname));
-    const [accountMessage, setAccountMessage] = React.useState('');
+    const [path, setPath] = React.useState(() => normalizePath(window.location.pathname));
+    const [message, setMessage] = React.useState('');
 
-    const navigate = React.useCallback((path) => {
-        const normalized = normalizePath(path);
-        if (normalized === currentPath) return;
+    // Nav
+    const navigate = (newPath) => {
+        const normalized = normalizePath(newPath);
+        if (normalized === path) return;
         window.history.pushState({}, '', normalized);
-        setCurrentPath(normalized);
-    }, [currentPath]);
+        setPath(normalized);
+    };
 
+    //changements d'URL
     React.useEffect(() => {
-        const onPopState = () => setCurrentPath(normalizePath(window.location.pathname));
-        window.addEventListener('popstate', onPopState);
-        return () => window.removeEventListener('popstate', onPopState);
+        window.addEventListener('popstate', () => {
+            setPath(normalizePath(window.location.pathname));
+        });
     }, []);
 
+    //localStorage
     React.useEffect(() => {
         if (token) {
             localStorage.setItem('authToken', token);
-            return;
+        } else {
+            localStorage.removeItem('authToken');
         }
-        localStorage.removeItem('authToken');
     }, [token]);
 
+    // Redirection
     React.useEffect(() => {
-        if (!token && currentPath === '/dashboard') {
-            navigate('/login');
-            return;
-        }
-        if (token && (currentPath === '/login' || currentPath === '/sign')) {
-            navigate('/dashboard');
-            return;
-        }
-        if (!['/', '/login', '/sign', '/dashboard'].includes(currentPath)) {
-            navigate('/');
-        }
-    }, [token, currentPath, navigate]);
+        if (!token && path === '/dashboard') navigate('/login');
+        if (token && (path === '/login' || path === '/sign')) navigate('/dashboard');
+        if (!['/', '/login', '/sign', '/dashboard'].includes(path)) navigate('/');
+    }, [token, path]);
 
+    // Déco
     const logout = () => {
         setToken('');
-        setAccountMessage('Vous etes deconnecte.');
+        setMessage('Vous etes deconnecte.');
         navigate('/');
     };
 
+    // Supprde compte
     const deleteAccount = async () => {
-        setAccountMessage('');
+        setMessage('');
         try {
             const res = await fetch('/auth/profile', {
                 method: 'DELETE',
@@ -56,27 +54,28 @@ function App() {
                 throw new Error(data.error || 'Erreur suppression compte');
             }
             setToken('');
-            setAccountMessage(data.message || 'Compte supprime.');
+            setMessage(data.message || 'Compte supprime.');
             navigate('/');
         } catch (err) {
-            setAccountMessage(err.message);
+            setMessage(err.message);
         }
     };
 
-    const authTab = currentPath === '/sign' ? 'register' : 'login';
+    //chemin
+    const authTab = path === '/sign' ? 'register' : 'login';
 
-    if (currentPath === '/') {
-        return <HomePage navigate={navigate} accountMessage={accountMessage} />;
+    if (path === '/') {
+        return <HomePage navigate={navigate} message={message} />;
     }
 
-    if (currentPath === '/login' || currentPath === '/sign') {
+    if (path === '/login' || path === '/sign') {
         return <AuthPage authTab={authTab} setToken={setToken} navigate={navigate} />;
     }
 
     return (
         <DashboardPage
             token={token}
-            accountMessage={accountMessage}
+            message={message}
             logout={logout}
             deleteAccount={deleteAccount}
         />

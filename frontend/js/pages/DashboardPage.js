@@ -1,42 +1,28 @@
-function DashboardPage({ token, accountMessage, logout, deleteAccount }) {
-    const { Container, Row, Col } = ReactBootstrap;
-
+function DashboardPage({ token, message, logout, deleteAccount }) {
     return (
-        <Container fluid className="app-shell page-dashboard" id="dashboard-shell">
+        <div className="app-shell page-dashboard" id="dashboard-shell" style={{ minHeight: '100vh' }}>
             <div className="dashboard-page-inner">
-                <Row>
-                    <Col lg={{ offset: 1, span: 10 }}>
-                        <section className="dashboard-topbar mt-4 mb-3">
-                            <div>
-                                <p className="hero-kicker mb-2">Dashboard</p>
-                                <h1 className="hero-title mb-1">Tableau de bord</h1>
-                                <p className="hero-subtitle mb-0">Vue complete de vos projets et taches.</p>
-                            </div>
-                            <div className="d-flex gap-2 flex-wrap">
-                                <button type="button" className="btn btn-outline-secondary" onClick={logout}>
-                                    Se deconnecter
-                                </button>
-                                <button type="button" className="btn btn-danger" onClick={deleteAccount}>
-                                    Supprimer mon compte
-                                </button>
-                            </div>
-                        </section>
-
-                        <div className="card mb-3" id="account-bar">
-                            <div className="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <div>
-                                    <strong>Session active</strong>
-                                    <div className="text-muted">Vous etes connecte.</div>
-                                </div>
-                                <div className="session-pill">Etat: en ligne</div>
-                            </div>
+                <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '4rem', paddingRight: '4rem' }}>
+                    <section className="dashboard-topbar mt-4 d-flex justify-content-between align-items-center mb-4">
+                        <div className="d-flex align-items-center gap-2">
+                            <div className="home-logo-mark">F</div>
+                            <span className="fw-bold fs-5">Flowboard</span>
                         </div>
+                        <div className="d-flex gap-2">
+                            <button type="button" className="btn btn-outline-secondary" onClick={logout}>
+                                Se deconnecter
+                            </button>
+                            <button type="button" className="btn btn-danger" onClick={deleteAccount}>
+                                Supprimer mon compte
+                            </button>
+                        </div>
+                    </section>
 
-                        {accountMessage && <div className="alert alert-success">{accountMessage}</div>}
-                        <TodoListCard token={token} />
-                    </Col>
-                </Row>
+                    {message && <div className="alert alert-success">{message}</div>}
+
+                    <TodoListCard token={token} />
+                </div>
             </div>
-        </Container>
+        </div>
     );
 }
