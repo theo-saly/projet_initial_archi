@@ -245,6 +245,7 @@ function TodoListCard({ token }) {
                                 <label>Nom du projet</label>
                                 <input
                                     className="form-control"
+                                    placeholder="Ex: Refonte portail client"
                                     value={projectForm.name}
                                     onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
                                     required
@@ -254,6 +255,7 @@ function TodoListCard({ token }) {
                                 <label>Description</label>
                                 <input
                                     className="form-control"
+                                    placeholder="Objectif du projet"
                                     value={projectForm.description}
                                     onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
                                     required
@@ -313,6 +315,7 @@ function TodoListCard({ token }) {
                                     <label>Titre de la tache</label>
                                     <input
                                         className="form-control"
+                                        placeholder="Ex: Designer la page d'accueil"
                                         value={taskForm.title}
                                         onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
                                         required
@@ -323,6 +326,7 @@ function TodoListCard({ token }) {
                                     <label>Description</label>
                                     <input
                                         className="form-control"
+                                        placeholder="Details de la tache"
                                         value={taskForm.description}
                                         onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
                                         required
