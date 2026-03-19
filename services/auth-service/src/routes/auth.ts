@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createUser, authenticateUser, deleteUser } from '../persistence/user';
+import { createUser, authenticateUser, deleteUser, getUserById } from '../persistence/user';
 import jwt from 'jsonwebtoken';
 
 interface TokenPayload {
@@ -51,6 +51,20 @@ router.delete('/profile', (req, res) => {
     } catch {
         res.status(401).json({ error: 'Token invalide' });
     }
+});
+
+router.get('/users/:id', (req, res) => {
+    const userId = Number(req.params.id);
+    if (!Number.isFinite(userId)) {
+        return res.status(400).json({ error: 'Identifiant utilisateur invalide' });
+    }
+
+    const user = getUserById(userId);
+    if (!user) {
+        return res.status(404).json({ error: 'Utilisateur non trouve' });
+    }
+
+    return res.json(user);
 });
 
 export default router;

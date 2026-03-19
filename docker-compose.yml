@@ -49,6 +49,15 @@ services:
         environment:
             - REDIS_HOST=redis
             - LOG_FILE=/app/logs/notifications.log
+            - SMTP_HOST=smtp.hostinger.com
+            - SMTP_PORT=465
+            - SMTP_SECURE=true
+            - SMTP_USER=kaban@theo-saly.com
+            - SMTP_FROM=kaban@theo-saly.com
+            - SMTP_RECIPIENT=kaban@theo-saly.com
+            - "SMTP_PASS=!Kaban2026"
+            - AUTH_SERVICE_URL=http://auth-service:3001
+            - PROJECT_SERVICE_URL=http://project-service:3002
         depends_on:
             - redis
 

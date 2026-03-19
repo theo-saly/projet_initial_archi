@@ -45,3 +45,12 @@ export function deleteUser(id: number): boolean {
     users.splice(index, 1);
     return true;
 }
+
+export function getUserById(id: number): Pick<User, 'id' | 'email'> | null {
+    const user = users.find((u) => u.id === id);
+    if (!user) return null;
+    return {
+        id: user.id,
+        email: user.email,
+    };
+}

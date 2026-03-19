@@ -30,7 +30,7 @@ Application de gestion de projet Kanban construite en **microservices** avec **N
 | **auth-service** | 3001 | Inscription, login JWT, suppression de compte | In-memory |
 | **project-service** | 3002 | CRUD projets, clôture avec vérification des tâches | SQLite |
 | **task-service** | 3003 | CRUD tâches, publication d'événements Redis | SQLite |
-| **notification-service** | 3004 | Écoute événements Redis, écriture log | Fichier de log |
+| **notification-service** | 3004 | Écoute événements Redis, écriture log, envoi e-mail SMTP | Fichier de log |
 | **redis** | 6379 | Message broker (Redis Streams) | — |
 | **frontend** | 3000 | Interface web (Nginx + React CDN) | — |
 
@@ -174,6 +174,15 @@ projet_initial_archi/
 | `REDIS_HOST` | task, project, notification | Hôte Redis | `localhost` |
 | `TASK_SERVICE_URL` | project | URL du task-service | — |
 | `LOG_FILE` | notification | Chemin du fichier de log | `/app/logs/notifications.log` |
+| `SMTP_HOST` | notification | Hôte SMTP | — |
+| `SMTP_PORT` | notification | Port SMTP | `465` |
+| `SMTP_SECURE` | notification | TLS SMTP activé | `true` |
+| `SMTP_USER` | notification | Utilisateur SMTP | — |
+| `SMTP_PASS` | notification | Mot de passe SMTP | — |
+| `SMTP_FROM` | notification | Adresse expéditeur | `SMTP_USER` |
+| `SMTP_RECIPIENT` | notification | Adresse destinataire par défaut | `SMTP_USER` |
+| `AUTH_SERVICE_URL` | notification | URL auth-service (resolution email utilisateur) | `http://auth-service:3001` |
+| `PROJECT_SERVICE_URL` | notification | URL project-service (resolution owner du projet) | `http://project-service:3002` |
 
 ## Tester le backend manuellement
 

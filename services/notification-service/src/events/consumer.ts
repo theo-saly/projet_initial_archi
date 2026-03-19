@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import { writeLog } from '../logger';
+import { sendEmailNotification } from '../mailer';
 
 const STREAMS = [
     { name: 'task-events', group: 'notif-task-group' },
@@ -55,6 +56,7 @@ export async function startConsumer(): Promise<void> {
                     for (const [messageId, fields] of messages) {
                         const event = parseFields(fields);
                         writeLog(event);
+                        await sendEmailNotification(event);
                         await redis.xack(STREAMS[0].name, STREAMS[0].group, messageId);
                     }
                 }
@@ -73,6 +75,7 @@ export async function startConsumer(): Promise<void> {
                     for (const [messageId, fields] of messages) {
                         const event = parseFields(fields);
                         writeLog(event);
+                        await sendEmailNotification(event);
                         await redis.xack(STREAMS[1].name, STREAMS[1].group, messageId);
                     }
                 }
