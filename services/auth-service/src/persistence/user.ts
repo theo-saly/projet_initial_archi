@@ -9,15 +9,17 @@ export interface User {
 }
 
 const users: User[] = [];
+let nextId = 1;
 
 export function createUser(
     email: string,
     password: string,
     consent: boolean,
-): User {
+): User | null {
+    if (users.some((u) => u.email === email)) return null;
     const hashedPassword = bcrypt.hashSync(password, 10);
     const user: User = {
-        id: users.length + 1,
+        id: nextId++,
         email,
         password: hashedPassword,
         consent,

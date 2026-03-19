@@ -25,6 +25,9 @@ router.post('/register', (req, res) => {
         consent === 1 ||
         consent === '1';
     const user = createUser(email, password, consentBool);
+    if (!user) {
+        return res.status(409).json({ error: 'Un compte avec cet email existe déjà' });
+    }
     res.status(201).json({
         id: user.id,
         email: user.email,
