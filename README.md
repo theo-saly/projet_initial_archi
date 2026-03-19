@@ -1,94 +1,207 @@
-# Todo App - Architecture Logicielle
+# Kanban Project Manager - Architecture Microservices
 
-Application Todo List avec **Express 5**, **TypeScript**, **React** (CDN) et persistance interchangeable (SQLite / MySQL / In-Memory).
+Application de gestion de projet Kanban construite en **microservices** avec **Node.js**, **TypeScript**, **Express 5**, **Redis Streams** et **Docker Compose**.
+
+Évolution d'une TodoList monolithique vers une architecture distribuée event-driven.
 
 ## Architecture
 
 ```
-HTTP → Express Router → Controller → Repository (persistence) → DB
+┌──────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│   Frontend   │────▶│  project-service │────▶│   task-service   │
+│  (Nginx)     │     │     :3002        │     │     :3003        │
+│   :3000      │     └────────┬─────────┘     └────────┬─────────┘
+│              │              │                        │
+│              │────▶┌────────┴─────────┐              │
+│              │     │   auth-service   │              │
+│              │     │     :3001        │     ┌────────▼─────────┐
+└──────────────┘     └──────────────────┘     │   Redis Streams  │
+                                              │     :6379        │
+                     ┌──────────────────┐     └────────┬─────────┘
+                     │notification-serv.│◀─────────────┘
+                     │     :3004        │  (écoute événements)
+                     └──────────────────┘
 ```
 
-- **Controllers** : logique CRUD (`src/controllers/`)
-- **Persistence** : pattern Repository avec 3 implémentations choisies selon l'environnement (`src/persistence/`)
-- **Routes** : endpoints CRUD + authentification JWT (`src/routes/`)
-- **Frontend** : React via CDN avec Babel in-browser (`src/static/`)
+### Services
+
+| Service | Port | Rôle | Base de données |
+|---------|------|------|-----------------|
+| **auth-service** | 3001 | Inscription, login JWT, suppression de compte | In-memory |
+| **project-service** | 3002 | CRUD projets, clôture avec vérification des tâches | SQLite |
+| **task-service** | 3003 | CRUD tâches, publication d'événements Redis | SQLite |
+| **notification-service** | 3004 | Écoute événements Redis, écriture log | Fichier de log |
+| **redis** | 6379 | Message broker (Redis Streams) | — |
+| **frontend** | 3000 | Interface web (Nginx + React CDN) | — |
+
+### Communication inter-services
+
+- **Synchrone (REST)** : le frontend appelle les services via Nginx, le project-service appelle le task-service pour vérifier les tâches avant clôture
+- **Asynchrone (Redis Streams)** : le task-service et le project-service publient des événements, le notification-service les consomme
+
+### Événements
+
+| Événement | Producteur | Déclencheur |
+|-----------|------------|-------------|
+| `TaskCompleted` | task-service | Tâche passe à "terminé" |
+| `TaskReopened` | task-service | Tâche quitte "terminé" |
+| `ProjectCompleted` | project-service | Projet clôturé |
 
 ## API
 
-| Méthode  | Endpoint         | Description                |
-|----------|------------------|----------------------------|
-| GET      | `/items`         | Liste tous les todos       |
-| POST     | `/items`         | Crée un todo               |
-| PUT      | `/items/:id`     | Met à jour un todo         |
-| DELETE   | `/items/:id`     | Supprime un todo           |
-| POST     | `/auth/register` | Inscription utilisateur    |
-| POST     | `/auth/login`    | Connexion (retourne JWT)   |
-| DELETE   | `/auth/profile`  | Suppression de compte      |
+### Auth Service (`:3001`)
 
-## Installation
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| POST | `/auth/register` | Inscription (email, password, consent) |
+| POST | `/auth/login` | Connexion (retourne JWT) |
+| DELETE | `/auth/profile` | Suppression de compte (droit à l'oubli) |
+
+### Project Service (`:3002`)
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/projects` | Liste les projets |
+| GET | `/projects/:id` | Détail d'un projet |
+| POST | `/projects` | Crée un projet |
+| PUT | `/projects/:id` | Met à jour / clôture un projet |
+| DELETE | `/projects/:id` | Supprime un projet |
+
+### Task Service (`:3003`)
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/tasks` | Liste toutes les tâches |
+| GET | `/tasks/by-project?projectId=xxx` | Tâches d'un projet |
+| POST | `/tasks` | Crée une tâche |
+| PUT | `/tasks/:id` | Met à jour une tâche |
+| DELETE | `/tasks/:id` | Supprime une tâche |
+
+## Lancement
+
+### Prérequis
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installé et lancé
+
+### Démarrage
 
 ```bash
-npm install
-npm install --save-dev ts-jest typescript @types/jest
-npm install jsonwebtoken @types/jsonwebtoken bcryptjs @types/bcryptjs
-npx playwright install
+docker compose up --build
 ```
 
-## Commandes
+L'application est accessible sur `http://localhost:3000`.
+
+### Arrêt
 
 ```bash
-npm run dev                              # Serveur dev (port 3000)
-npx jest                                 # Tests unitaires
-npx jest --coverage --coverageReport=html # Tests avec couverture
-npx playwright test                      # Tests E2E
-npm run lint                             # Linter ESLint
-npm run prettify                         # Formatage Prettier
-docker compose up --build                # Lancement Docker
+docker compose down
 ```
 
-## Validation Front (workflow projet)
-
-Le frontend `http://localhost:3000` permet de valider le processus cible :
-
-1. Creation d'un projet
-2. Creation d'une tache associee au projet
-3. Passage de la tache en `termine`
-4. Cloture du projet, puis verification des logs de notification
-
-Commandes utiles :
+Pour supprimer aussi les données persistées :
 
 ```bash
-npx playwright test tests-e2e/todo.spec.ts
-docker compose logs --no-color --tail=200 notification-service
+docker compose down -v
 ```
 
-Note: le frontend utilise un proxy nginx (`frontend/nginx.conf`) pour router
-`/projects` vers `project-service` et `/tasks` vers `task-service`.
-
-## Mise à jour des dépendances
+## Tests
 
 ```bash
-npm outdated
-npm install @playwright/test@latest jest@latest mysql2@latest nodemon@latest
-npm install playwright@latest prettier@latest sqlite3@latest uuid@latest
-npm install wait-port@latest express@latest
-npm install eslint --save-dev
-npm init @eslint/config
+# Tous les tests depuis la racine
+pnpm test ou npm test
+
+# Tests d'un service spécifique
+cd services/task-service && npx jest --verbose
+cd services/project-service && npx jest --verbose
+```
+
+### Couverture des tests (9 tests)
+
+| Test | Service | Use case |
+|------|---------|----------|
+| Créer un projet | project-service | UC1 |
+| Créer une tâche associée à un projet | task-service | UC2 |
+| Marquer une tâche comme terminée | task-service | UC3 |
+| Refuser un status invalide | task-service | UC3 |
+| Clôturer un projet (tâches terminées) | project-service | UC4 |
+| Refuser clôture (tâches non terminées) | project-service | UC4 |
+| Refuser clôture (aucune tâche) | project-service | UC4 |
+| Aucun test n'importe sqlite3 directement | architecture | Isolation |
+| Tests de controllers mockent la persistence | architecture | Isolation |
+
+## Structure du projet
+
+```
+projet_initial_archi/
+├── services/
+│   ├── auth-service/          # Authentification JWT
+│   │   ├── src/
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   └── Dockerfile
+│   ├── project-service/       # Gestion de projets
+│   │   ├── src/
+│   │   ├── spec/
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   └── Dockerfile
+│   ├── task-service/          # Gestion de tâches
+│   │   ├── src/
+│   │   ├── spec/
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   └── Dockerfile
+│   └── notification-service/  # Consommateur d'événements
+│       ├── src/
+│       ├── package.json
+│       ├── tsconfig.json
+│       └── Dockerfile
+├── frontend/                  # Interface web (Nginx)
+├── spec/                      # Tests d'architecture
+├── Documentions/              # ADR (décisions d'architecture)
+├── docker-compose.yml
+└── README.md
 ```
 
 ## Variables d'environnement
 
-| Variable             | Description                     | Défaut              |
-|----------------------|---------------------------------|----------------------|
-| `MYSQL_HOST`         | Active la persistance MySQL     | —                    |
-| `MYSQL_USER/PASSWORD/DB` | Identifiants MySQL          | —                    |
-| `SQLITE_DB_LOCATION` | Chemin du fichier SQLite        | `/etc/todos/todo.db` |
-| `NODE_ENV=test`      | Active la persistance In-Memory | —                    |
+| Variable | Service | Description | Défaut |
+|----------|---------|-------------|--------|
+| `JWT_SECRET` | auth, project, task | Clé secrète JWT | `SECRET_KEY` |
+| `SQLITE_DB_LOCATION` | project, task | Chemin fichier SQLite | `/etc/*/_.db` |
+| `REDIS_HOST` | task, project, notification | Hôte Redis | `localhost` |
+| `TASK_SERVICE_URL` | project | URL du task-service | — |
+| `LOG_FILE` | notification | Chemin du fichier de log | `/app/logs/notifications.log` |
 
+## Tester le backend manuellement
+
+```bash
+# Créer un projet
+curl -X POST http://localhost:3002/projects \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"Mon projet\",\"description\":\"Test kanban\"}"
+
+# Créer une tâche
+curl -X POST http://localhost:3003/tasks \
+  -H "Content-Type: application/json" \
+  -d "{\"title\":\"Ma tâche\",\"status\":\"à faire\",\"projectId\":\"<ID_PROJET>\"}"
+
+# Marquer la tâche comme terminée (déclenche TaskCompleted)
+curl -X PUT http://localhost:3003/tasks/<ID_TACHE> \
+  -H "Content-Type: application/json" \
+  -d "{\"status\":\"terminé\"}"
+
+# Clôturer le projet (déclenche ProjectCompleted)
+curl -X PUT http://localhost:3002/projects/<ID_PROJET> \
+  -H "Content-Type: application/json" \
+  -d "{\"status\":\"terminé\"}"
+
+# Voir les logs de notification
+docker compose logs notification-service
+```
 
 ## ADR
 
-Les ADR se trouvent dans le dossier Documentions (décisions d'architecture)
+Les décisions d'architecture sont documentées dans le dossier `Documentions/`.
 
 ## Trello
 

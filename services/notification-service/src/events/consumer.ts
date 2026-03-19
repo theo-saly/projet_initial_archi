@@ -51,7 +51,7 @@ export async function startConsumer(): Promise<void> {
             );
 
             if (results) {
-                for (const [, messages] of results) {
+                for (const [, messages] of results as [string, [string, string[]][]][]) {
                     for (const [messageId, fields] of messages) {
                         const event = parseFields(fields);
                         writeLog(event);
@@ -69,7 +69,7 @@ export async function startConsumer(): Promise<void> {
             );
 
             if (projectResults) {
-                for (const [, messages] of projectResults) {
+                for (const [, messages] of projectResults as [string, [string, string[]][]][]) {
                     for (const [messageId, fields] of messages) {
                         const event = parseFields(fields);
                         writeLog(event);
