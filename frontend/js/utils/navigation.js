@@ -31,8 +31,8 @@ function getUserIdFromToken(token) {
 
         // ID utilisateur
         const userId = decoded.id || decoded.userId || decoded.sub;
-        console.log('Token decoded:', decoded);
-        console.log('User ID extrait:', userId);
+        //console.log('Token decoded:', decoded);
+        //console.log('User ID extrait:', userId);
         return userId || null;
     } catch (err) {
         console.error('Erreur lors de la décodification du token:', err);

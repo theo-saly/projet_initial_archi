@@ -8,6 +8,9 @@ function RegisterPage({ busy, message, onRegister, goToLogin }) {
     // submit register
     const handleSubmit = async (event) => {
         event.preventDefault();
+        if (!formData.consent) {
+            return;
+        }
         await onRegister({
             email: formData.email.trim(),
             password: formData.password,
@@ -107,6 +110,8 @@ function RegisterPage({ busy, message, onRegister, goToLogin }) {
                                                 consent: e.target.checked,
                                             })
                                         }
+                                        required
+                                        disabled={busy}
                                     />
                                     <label
                                         className="form-check-label"
@@ -120,7 +125,7 @@ function RegisterPage({ busy, message, onRegister, goToLogin }) {
                                     <button
                                         type="submit"
                                         className="btn btn-primary"
-                                        disabled={busy}
+                                        disabled={busy || !formData.consent}
                                     >
                                         Creer mon compte
                                     </button>

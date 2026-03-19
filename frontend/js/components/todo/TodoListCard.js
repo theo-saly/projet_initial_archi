@@ -17,6 +17,11 @@ function TodoListCard({
         description: '',
         status: 'à faire',
     });
+    const [editingTaskId, setEditingTaskId] = React.useState(null);
+    const [editTaskForm, setEditTaskForm] = React.useState({
+        title: '',
+        description: '',
+    });
 
     // Bar
     const safeTasks = Array.isArray(tasks) ? tasks : [];
@@ -95,6 +100,45 @@ function TodoListCard({
         try {
             await updateTask(task.id, { status: nextStatus });
             pushMessage('success', 'Statut de la tache mis a jour.');
+        } catch (err) {
+            pushMessage('danger', err.message);
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    // edition tache
+    const onStartEditTask = (task) => {
+        setEditingTaskId(task.id);
+        setEditTaskForm({
+            title: task.title || '',
+            description: task.description || '',
+        });
+    };
+
+    const onCancelEditTask = () => {
+        setEditingTaskId(null);
+        setEditTaskForm({ title: '', description: '' });
+    };
+
+    const onSaveEditTask = async (task) => {
+        const nextTitle = editTaskForm.title.trim();
+        const nextDescription = editTaskForm.description.trim();
+
+        if (!nextTitle || !nextDescription) {
+            pushMessage('danger', 'Nom et description de la tache sont requis.');
+            return;
+        }
+
+        setBusy(true);
+        try {
+            await updateTask(task.id, {
+                title: nextTitle,
+                description: nextDescription,
+                status: task.status,
+            });
+            onCancelEditTask();
+            pushMessage('success', 'Tache mise a jour.');
         } catch (err) {
             pushMessage('danger', err.message);
         } finally {
@@ -211,14 +255,56 @@ function TodoListCard({
                                 className="task-item p-3 p-md-4"
                             >
                                 <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-                                    <div>
-                                        <h3 className="h6 mb-1">
-                                            {task.title}
-                                        </h3>
-                                        <p className="text-muted mb-2">
-                                            {task.description ||
-                                                'Sans description'}
-                                        </p>
+                                    <div className="flex-grow-1">
+                                        {editingTaskId === task.id ? (
+                                            <div className="row g-2 mb-2">
+                                                <div className="col-12 col-md-6">
+                                                    <label className="form-label mb-1">
+                                                        Nom
+                                                    </label>
+                                                    <input
+                                                        className="form-control form-control-sm"
+                                                        value={editTaskForm.title}
+                                                        onChange={(e) =>
+                                                            setEditTaskForm({
+                                                                ...editTaskForm,
+                                                                title: e.target.value,
+                                                            })
+                                                        }
+                                                        disabled={busy}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="col-12 col-md-6">
+                                                    <label className="form-label mb-1">
+                                                        Description
+                                                    </label>
+                                                    <input
+                                                        className="form-control form-control-sm"
+                                                        value={editTaskForm.description}
+                                                        onChange={(e) =>
+                                                            setEditTaskForm({
+                                                                ...editTaskForm,
+                                                                description:
+                                                                    e.target.value,
+                                                            })
+                                                        }
+                                                        disabled={busy}
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <React.Fragment>
+                                                <h3 className="h6 mb-1">
+                                                    {task.title}
+                                                </h3>
+                                                <p className="text-muted mb-2">
+                                                    {task.description ||
+                                                        'Sans description'}
+                                                </p>
+                                            </React.Fragment>
+                                        )}
                                         <span
                                             className={`badge ${task.status === 'terminé' ? 'text-bg-success' : task.status === 'en cours' ? 'text-bg-warning' : 'text-bg-secondary'}`}
                                         >
@@ -250,6 +336,14 @@ function TodoListCard({
                                         </select>
                                         <button
                                             type="button"
+                                            className="btn btn-outline-primary btn-sm"
+                                            onClick={() => onStartEditTask(task)}
+                                            disabled={busy || editingTaskId === task.id}
+                                        >
+                                            Modifier
+                                        </button>
+                                        <button
+                                            type="button"
                                             className="btn btn-outline-success btn-sm"
                                             onClick={() => onToggleStatus(task)}
                                             disabled={busy}
@@ -268,6 +362,28 @@ function TodoListCard({
                                         >
                                             Supprimer
                                         </button>
+                                        {editingTaskId === task.id && (
+                                            <React.Fragment>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-primary btn-sm"
+                                                    onClick={() =>
+                                                        onSaveEditTask(task)
+                                                    }
+                                                    disabled={busy}
+                                                >
+                                                    Enregistrer
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-secondary btn-sm"
+                                                    onClick={onCancelEditTask}
+                                                    disabled={busy}
+                                                >
+                                                    Annuler
+                                                </button>
+                                            </React.Fragment>
+                                        )}
                                     </div>
                                 </div>
                             </article>
