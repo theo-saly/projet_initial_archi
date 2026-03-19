@@ -21,9 +21,8 @@ Application de gestion de projet Kanban construite en **microservices** avec **N
    - [Tests d'architecture](#tests-darchitecture)
    - [Tests E2E (Playwright)](#tests-e2e-playwright)
 10. [Qualité de code](#qualité-de-code)
-11. [Tester le backend manuellement](#tester-le-backend-manuellement)
-12. [ADR](#adr)
-13. [Trello](#trello)
+11. [ADR](#adr)
+12. [Trello](#trello)
 
 ---
 
@@ -63,8 +62,8 @@ Application de gestion de projet Kanban construite en **microservices** avec **N
 | **notification-service** | 3004 | Écoute événements Redis, écriture log, envoi e-mail SMTP | Fichier de log |
 | **redis** | 6379 | Message broker (Redis Streams) | — |
 | **frontend** | 3000 | Interface web (Nginx reverse-proxy + React CDN) | — |
-| **mysql-tasks** | 3306 | Base MySQL pour les tâches *(profil `mysql`)* | MySQL 8 |
-| **mysql-projects** | 3307 | Base MySQL pour les projets *(profil `mysql`)* | MySQL 8 |
+| **mysql-tasks** | 3308 | Base MySQL pour les tâches *(profil `mysql`)* | MySQL 8 |
+| **mysql-projects** | 3309 | Base MySQL pour les projets *(profil `mysql`)* | MySQL 8 |
 
 ---
 
@@ -88,7 +87,7 @@ Application de gestion de projet Kanban construite en **microservices** avec **N
 | PUT | `/projects/:id` | Met à jour / clôture / réouvre un projet |
 | DELETE | `/projects/:id` | Supprime un projet |
 
-> La clôture (`status: "terminé"`) vérifie en REST synchrone que **toutes** les tâches du projet sont terminées. Si ce n'est pas le cas, la requête est rejetée (400).
+> La clôture (`status: "cloturé"`) vérifie en REST synchrone que **toutes** les tâches du projet sont terminées. Si ce n'est pas le cas, la requête est rejetée (400).
 
 ### Task Service (`:3003`)
 
@@ -194,7 +193,7 @@ Puis lancer avec le profil `mysql`, en modifiant la variable d'environnement pui
 docker compose --profile mysql up --build
 ```
 
-> Les conteneurs `mysql-tasks` (port 3306) et `mysql-projects` (port 3307) démarrent uniquement avec ce profil.
+> Les conteneurs `mysql-tasks` (port 3308) et `mysql-projects` (port 3309) démarrent uniquement avec ce profil.
 
 ### Accès à l'application
 
@@ -276,17 +275,60 @@ cd services/project-service; npx jest --verbose
 cd services/task-service; npx jest --verbose
 ```
 
-#### Détail des tests unitaires (7 tests)
+#### Détail des tests unitaires (27 tests / 12 suites)
 
-| # | Test | Fichier | Service | Use case |
-|---|------|---------|---------|----------|
-| 1 | Créer un projet | `addProject.spec.ts` | project-service | UC1 |
-| 2 | Clôturer un projet (tâches terminées) | `updateProject.spec.ts` | project-service | UC4 |
-| 3 | Refuser clôture (tâches non terminées) | `updateProject.spec.ts` | project-service | UC4 |
-| 4 | Refuser clôture (aucune tâche) | `updateProject.spec.ts` | project-service | UC4 |
-| 5 | Créer une tâche associée à un projet | `addTask.spec.ts` | task-service | UC2 |
-| 6 | Marquer une tâche comme terminée | `updateTask.spec.ts` | task-service | UC3 |
-| 7 | Refuser un status invalide | `updateTask.spec.ts` | task-service | UC3 |
+**auth-service** (5 tests)
+
+| # | Test | Fichier |
+|---|------|---------|
+| 1 | Créer un utilisateur avec succès | `user.spec.ts` |
+| 2 | Refuser un email déjà utilisé | `user.spec.ts` |
+| 3 | Login avec identifiants valides retourne un JWT | `user.spec.ts` |
+| 4 | Supprimer un utilisateur existant | `user.spec.ts` |
+| 5 | ID unique après suppression et recréation | `user.spec.ts` |
+
+**project-service** (9 tests)
+
+| # | Test | Fichier | Use case |
+|---|------|---------|----------|
+| 1 | Créer un projet | `addProject.spec.ts` | UC1 |
+| 2 | Clôturer un projet (tâches terminées) | `updateProject.spec.ts` | UC4 |
+| 3 | Refuser clôture (tâches non terminées) | `updateProject.spec.ts` | UC4 |
+| 4 | Refuser clôture (aucune tâche) | `updateProject.spec.ts` | UC4 |
+| 5 | Récupérer un projet par ID | `getProject.spec.ts` | — |
+| 6 | Retourner 404 si projet inexistant | `getProject.spec.ts` | — |
+| 7 | Lister les projets par ownerId | `getProject.spec.ts` | — |
+| 8 | Supprimer un projet existant | `deleteProject.spec.ts` | — |
+| 9 | Refuser suppression d'un projet inexistant | `deleteProject.spec.ts` | — |
+
+**task-service** (7 tests)
+
+| # | Test | Fichier | Use case |
+|---|------|---------|----------|
+| 1 | Créer une tâche associée à un projet | `addTask.spec.ts` | UC2 |
+| 2 | Marquer une tâche comme terminée | `updateTask.spec.ts` | UC3 |
+| 3 | Refuser un status invalide | `updateTask.spec.ts` | UC3 |
+| 4 | Lister toutes les tâches | `getTask.spec.ts` | — |
+| 5 | Récupérer les tâches d'un projet | `getTasksByProject.spec.ts` | — |
+| 6 | Refuser si projectId manquant | `getTasksByProject.spec.ts` | — |
+| 7 | Supprimer une tâche | `deleteTask.spec.ts` | — |
+
+**notification-service** (4 tests)
+
+| # | Test | Fichier |
+|---|------|---------|
+| 1 | TaskCompleted est loggé correctement | `logger.spec.ts` |
+| 2 | TaskReopened notifie la réouverture | `logger.spec.ts` |
+| 3 | ProjectCompleted notifie la fin du projet | `logger.spec.ts` |
+| 4 | Événement inconnu est loggé en JSON | `logger.spec.ts` |
+
+**architecture** (2 tests)
+
+| # | Test | Fichier |
+|---|------|---------|
+| 1 | Aucun import sqlite3 dans les tests | `no-sqlite-in-tests.spec.ts` |
+| 2 | Les controllers mockent la persistence | `no-sqlite-in-tests.spec.ts` |
+
 
 #### Principes de test
 
@@ -377,31 +419,8 @@ npx playwright test
 }
 ```
 
----
-## Tester le backend manuellement
-
-```bash
-# Créer un projet
-curl -X POST http://localhost:3002/projects \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Mon projet","description":"Test kanban"}'
-
-# Créer une tâche
-curl -X POST http://localhost:3003/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Ma tâche","status":"à faire","projectId":"<ID_PROJET>"}'
-
-# Marquer la tâche comme terminée (déclenche TaskCompleted)
-curl -X PUT http://localhost:3003/tasks/<ID_TACHE> \
-  -H "Content-Type: application/json" \
-  -d '{"status":"terminé"}'
-
-# Clôturer le projet (déclenche ProjectCompleted)
-curl -X PUT http://localhost:3002/projects/<ID_PROJET> \
-  -H "Content-Type: application/json" \
-  -d '{"status":"terminé"}'
-
 # Voir les logs de notification
+```
 docker compose logs notification-service
 ```
 

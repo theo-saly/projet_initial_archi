@@ -31,8 +31,6 @@ function formatNotification(event: Record<string, string>): string {
 export function writeLog(event: Record<string, string>): void {
     ensureLogDir();
 
-    //     const timestamp = event.timestamp || new Date().toISOString();
-    // const line = `[${timestamp}] ${event.eventType} | taskId=${event.taskId} | projectId=${event.projectId} | ${event.oldStatus} → ${event.newStatus}\n`;
     const line = formatNotification(event) + '\n';
 
     fs.appendFileSync(LOG_FILE, line, 'utf-8');

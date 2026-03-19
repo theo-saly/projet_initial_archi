@@ -10,9 +10,6 @@ jest.mock('../../src/events/publisher', () => ({
     publishEvent: jest.fn(),
 }));
 
-const mockFetch = jest.fn();
-global.fetch = mockFetch as any;
-
 const PROJECT = {
     id: 'proj-1',
     name: 'Mon projet',
@@ -22,6 +19,17 @@ const PROJECT = {
     ownerId: 'user-1',
 };
 
+function mockRes() {
+    return { send: jest.fn(), status: jest.fn().mockReturnThis(), json: jest.fn() };
+}
+
+function mockFetchWith(data: unknown) {
+    global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => data,
+    }) as unknown as jest.Mock;
+}
+
 beforeEach(() => {
     jest.clearAllMocks();
 });
@@ -29,48 +37,34 @@ beforeEach(() => {
 test('use case 4 : clôturer un projet quand toutes les tâches sont terminées', async () => {
     (db.getProject as jest.Mock)
         .mockResolvedValueOnce(PROJECT)
-        .mockResolvedValueOnce({ ...PROJECT, status: 'terminé' });
+        .mockResolvedValueOnce({ ...PROJECT, status: 'cloturé' });
 
-    mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => [
-            { id: 't1', status: 'terminé' },
-            { id: 't2', status: 'terminé' },
-        ],
-    });
+    mockFetchWith([
+        { id: 't1', status: 'terminé' },
+        { id: 't2', status: 'terminé' },
+    ]);
 
-    const req = { params: { id: 'proj-1' }, body: { status: 'terminé' } };
-    const res = {
-        send: jest.fn(),
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-    };
+    const req = { params: { id: 'proj-1' }, body: { status: 'cloturé' } };
+    const res = mockRes();
 
     await updateProject(req, res);
 
     expect(db.updateProject as jest.Mock).toHaveBeenCalledTimes(1);
     expect(res.send).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'terminé' }),
+        expect.objectContaining({ status: 'cloturé' }),
     );
 });
 
 test('use case 4 : refuser la clôture si des tâches ne sont pas terminées', async () => {
     (db.getProject as jest.Mock).mockResolvedValueOnce(PROJECT);
 
-    mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => [
-            { id: 't1', status: 'terminé' },
-            { id: 't2', status: 'en cours' },
-        ],
-    });
+    mockFetchWith([
+        { id: 't1', status: 'terminé' },
+        { id: 't2', status: 'en cours' },
+    ]);
 
-    const req = { params: { id: 'proj-1' }, body: { status: 'terminé' } };
-    const res = {
-        send: jest.fn(),
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-    };
+    const req = { params: { id: 'proj-1' }, body: { status: 'cloturé' } };
+    const res = mockRes();
 
     await updateProject(req, res);
 
@@ -84,17 +78,10 @@ test('use case 4 : refuser la clôture si des tâches ne sont pas terminées', a
 test("use case 4 : refuser la clôture si le projet n'a aucune tâche", async () => {
     (db.getProject as jest.Mock).mockResolvedValueOnce(PROJECT);
 
-    mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => [],
-    });
+    mockFetchWith([]);
 
-    const req = { params: { id: 'proj-1' }, body: { status: 'terminé' } };
-    const res = {
-        send: jest.fn(),
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-    };
+    const req = { params: { id: 'proj-1' }, body: { status: 'cloturé' } };
+    const res = mockRes();
 
     await updateProject(req, res);
 
