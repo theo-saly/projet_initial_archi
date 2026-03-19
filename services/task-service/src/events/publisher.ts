@@ -24,12 +24,18 @@ export async function publishEvent(
         await client.xadd(
             STREAM_NAME,
             '*',
-            'eventType', eventType,
-            'taskId', payload.taskId,
-            'projectId', payload.projectId || '',
-            'oldStatus', payload.oldStatus || '',
-            'newStatus', payload.newStatus || '',
-            'timestamp', new Date().toISOString(),
+            'eventType',
+            eventType,
+            'taskId',
+            payload.taskId,
+            'projectId',
+            payload.projectId || '',
+            'oldStatus',
+            payload.oldStatus || '',
+            'newStatus',
+            payload.newStatus || '',
+            'timestamp',
+            new Date().toISOString(),
         );
     } catch (err) {
         console.error(`Erreur publication événement ${eventType}:`, err);

@@ -11,8 +11,16 @@ const CONSUMER_NAME = 'notification-consumer-1';
 async function ensureConsumerGroups(redis: Redis): Promise<void> {
     for (const stream of STREAMS) {
         try {
-            await redis.xgroup('CREATE', stream.name, stream.group, '0', 'MKSTREAM');
-            console.log(`Consumer group "${stream.group}" créé sur "${stream.name}"`);
+            await redis.xgroup(
+                'CREATE',
+                stream.name,
+                stream.group,
+                '0',
+                'MKSTREAM',
+            );
+            console.log(
+                `Consumer group "${stream.group}" créé sur "${stream.name}"`,
+            );
         } catch (err: unknown) {
             if (err instanceof Error && err.message.includes('BUSYGROUP')) {
                 console.log(`Consumer group "${stream.group}" existe déjà`);
@@ -44,39 +52,63 @@ export async function startConsumer(): Promise<void> {
     while (true) {
         try {
             const results = await redis.xreadgroup(
-                'GROUP', STREAMS[0].group, CONSUMER_NAME,
-                'COUNT', '10',
-                'BLOCK', 2000,
-                'STREAMS', STREAMS[0].name,
+                'GROUP',
+                STREAMS[0].group,
+                CONSUMER_NAME,
+                'COUNT',
+                '10',
+                'BLOCK',
+                2000,
+                'STREAMS',
+                STREAMS[0].name,
                 '>',
             );
 
             if (results) {
-                for (const [, messages] of results as [string, [string, string[]][]][]) {
+                for (const [, messages] of results as [
+                    string,
+                    [string, string[]][],
+                ][]) {
                     for (const [messageId, fields] of messages) {
                         const event = parseFields(fields);
                         writeLog(event);
                         await sendEmailNotification(event);
-                        await redis.xack(STREAMS[0].name, STREAMS[0].group, messageId);
+                        await redis.xack(
+                            STREAMS[0].name,
+                            STREAMS[0].group,
+                            messageId,
+                        );
                     }
                 }
             }
 
             const projectResults = await redis.xreadgroup(
-                'GROUP', STREAMS[1].group, CONSUMER_NAME,
-                'COUNT', '10',
-                'BLOCK', 2000,
-                'STREAMS', STREAMS[1].name,
+                'GROUP',
+                STREAMS[1].group,
+                CONSUMER_NAME,
+                'COUNT',
+                '10',
+                'BLOCK',
+                2000,
+                'STREAMS',
+                STREAMS[1].name,
                 '>',
             );
 
             if (projectResults) {
-                for (const [, messages] of projectResults as [string, [string, string[]][]][]) {
+                for (const [, messages] of projectResults as [
+                    string,
+                    [string, string[]][],
+                ][]) {
                     for (const [messageId, fields] of messages) {
                         const event = parseFields(fields);
                         writeLog(event);
                         await sendEmailNotification(event);
-                        await redis.xack(STREAMS[1].name, STREAMS[1].group, messageId);
+                        await redis.xack(
+                            STREAMS[1].name,
+                            STREAMS[1].group,
+                            messageId,
+                        );
                     }
                 }
             }

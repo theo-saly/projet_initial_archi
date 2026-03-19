@@ -34,7 +34,7 @@ export function authenticateUser(
     if (!user) return null;
     if (!bcrypt.compareSync(password, user.password)) return null;
     if (!user.consent) return null;
-    return jwt.sign({ id: user.id, email: user.email }, 'SECRET_KEY', {
+    return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET || 'SECRET_KEY', {
         expiresIn: '1h',
     });
 }

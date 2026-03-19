@@ -25,7 +25,7 @@ test('use case 1 : créer un projet', async () => {
 
     await addProject(req, res);
 
-    expect((db.storeProject as jest.Mock)).toHaveBeenCalledTimes(1);
+    expect(db.storeProject as jest.Mock).toHaveBeenCalledTimes(1);
     const stored = (db.storeProject as jest.Mock).mock.calls[0][0];
     expect(stored.id).toBe(id);
     expect(stored.ownerId).toBe('user-1');

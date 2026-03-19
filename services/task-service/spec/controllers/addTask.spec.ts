@@ -25,11 +25,13 @@ test('use case 2 : créer une tâche associée à un projet', async () => {
 
     await addTask(req, res);
 
-    expect((db.storeTask as jest.Mock)).toHaveBeenCalledTimes(1);
+    expect(db.storeTask as jest.Mock).toHaveBeenCalledTimes(1);
     const stored = (db.storeTask as jest.Mock).mock.calls[0][0];
     expect(stored.id).toBe(id);
     expect(stored.title).toBe('Ma tâche');
     expect(stored.projectId).toBe('project-id-456');
     expect(stored.status).toBe('à faire');
-    expect(res.send).toHaveBeenCalledWith(expect.objectContaining({ id, projectId: 'project-id-456' }));
+    expect(res.send).toHaveBeenCalledWith(
+        expect.objectContaining({ id, projectId: 'project-id-456' }),
+    );
 });

@@ -40,12 +40,18 @@ test('use case 4 : clôturer un projet quand toutes les tâches sont terminées'
     });
 
     const req = { params: { id: 'proj-1' }, body: { status: 'terminé' } };
-    const res = { send: jest.fn(), status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const res = {
+        send: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+    };
 
     await updateProject(req, res);
 
-    expect((db.updateProject as jest.Mock)).toHaveBeenCalledTimes(1);
-    expect(res.send).toHaveBeenCalledWith(expect.objectContaining({ status: 'terminé' }));
+    expect(db.updateProject as jest.Mock).toHaveBeenCalledTimes(1);
+    expect(res.send).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'terminé' }),
+    );
 });
 
 test('use case 4 : refuser la clôture si des tâches ne sont pas terminées', async () => {
@@ -60,7 +66,11 @@ test('use case 4 : refuser la clôture si des tâches ne sont pas terminées', a
     });
 
     const req = { params: { id: 'proj-1' }, body: { status: 'terminé' } };
-    const res = { send: jest.fn(), status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const res = {
+        send: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+    };
 
     await updateProject(req, res);
 
@@ -68,10 +78,10 @@ test('use case 4 : refuser la clôture si des tâches ne sont pas terminées', a
     expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ error: expect.stringContaining('tâches') }),
     );
-    expect((db.updateProject as jest.Mock)).not.toHaveBeenCalled();
+    expect(db.updateProject as jest.Mock).not.toHaveBeenCalled();
 });
 
-test('use case 4 : refuser la clôture si le projet n\'a aucune tâche', async () => {
+test("use case 4 : refuser la clôture si le projet n'a aucune tâche", async () => {
     (db.getProject as jest.Mock).mockResolvedValueOnce(PROJECT);
 
     mockFetch.mockResolvedValue({
@@ -80,10 +90,14 @@ test('use case 4 : refuser la clôture si le projet n\'a aucune tâche', async (
     });
 
     const req = { params: { id: 'proj-1' }, body: { status: 'terminé' } };
-    const res = { send: jest.fn(), status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const res = {
+        send: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+    };
 
     await updateProject(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect((db.updateProject as jest.Mock)).not.toHaveBeenCalled();
+    expect(db.updateProject as jest.Mock).not.toHaveBeenCalled();
 });

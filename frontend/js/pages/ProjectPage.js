@@ -1,10 +1,20 @@
-function ProjectPage({ token, projectId, navigate, busy, setBusy, pushMessage }) {
+function ProjectPage({
+    token,
+    projectId,
+    navigate,
+    busy,
+    setBusy,
+    pushMessage,
+}) {
     // etat
     const userId = getUserIdFromToken(token);
     const [project, setProject] = React.useState(null);
     const [tasks, setTasks] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
-    const [projectForm, setProjectForm] = React.useState({ name: '', description: '' });
+    const [projectForm, setProjectForm] = React.useState({
+        name: '',
+        description: '',
+    });
 
     // load le projet
     const loadProject = React.useCallback(async () => {
@@ -12,17 +22,16 @@ function ProjectPage({ token, projectId, navigate, busy, setBusy, pushMessage })
             headers: buildHeaders(token, false),
         });
         const payload = await parseApiResponse(response);
-        
+
         // check si l'utilisateur accède  à son propre projet
         const userIdStr = String(userId).trim();
         const ownerIdStr = String(payload.ownerId).trim();
-        
-        
+
         if (userIdStr !== ownerIdStr && userIdStr !== 'null') {
             console.error('ACCÈS REFUSÉ:', userIdStr, '!==', ownerIdStr);
             throw new Error('Acces refuse: ce projet ne vous appartient pas');
         }
-        
+
         setProject(payload);
         setProjectForm({
             name: payload.name || '',
@@ -33,9 +42,12 @@ function ProjectPage({ token, projectId, navigate, busy, setBusy, pushMessage })
 
     // load taches du projet
     const loadTasks = React.useCallback(async () => {
-        const response = await fetch(`/api/tasks/by-project?projectId=${encodeURIComponent(projectId)}`, {
-            headers: buildHeaders(token, false),
-        });
+        const response = await fetch(
+            `/api/tasks/by-project?projectId=${encodeURIComponent(projectId)}`,
+            {
+                headers: buildHeaders(token, false),
+            },
+        );
         const payload = await parseApiResponse(response);
         setTasks(Array.isArray(payload) ? payload : []);
         return Array.isArray(payload) ? payload : [];
@@ -78,7 +90,8 @@ function ProjectPage({ token, projectId, navigate, busy, setBusy, pushMessage })
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({
                     name: projectForm.name.trim() || project.name,
-                    description: projectForm.description.trim() || project.description,
+                    description:
+                        projectForm.description.trim() || project.description,
                     status: project.status,
                     echeance: project.echeance || new Date().toISOString(),
                 }),
@@ -190,13 +203,21 @@ function ProjectPage({ token, projectId, navigate, busy, setBusy, pushMessage })
                     </button>
                 </div>
                 <div className="card-body">
-                    <form onSubmit={saveProject} className="row g-3 align-items-end">
+                    <form
+                        onSubmit={saveProject}
+                        className="row g-3 align-items-end"
+                    >
                         <div className="col-12 col-md-4">
                             <label className="form-label">Nom</label>
                             <input
                                 className="form-control"
                                 value={projectForm.name}
-                                onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
+                                onChange={(e) =>
+                                    setProjectForm({
+                                        ...projectForm,
+                                        name: e.target.value,
+                                    })
+                                }
                                 required
                                 disabled={busy}
                             />
@@ -206,20 +227,31 @@ function ProjectPage({ token, projectId, navigate, busy, setBusy, pushMessage })
                             <input
                                 className="form-control"
                                 value={projectForm.description}
-                                onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
+                                onChange={(e) =>
+                                    setProjectForm({
+                                        ...projectForm,
+                                        description: e.target.value,
+                                    })
+                                }
                                 required
                                 disabled={busy}
                             />
                         </div>
                         <div className="col-12 col-md-3 d-grid">
-                            <button className="btn btn-primary" type="submit" disabled={busy}>
+                            <button
+                                className="btn btn-primary"
+                                type="submit"
+                                disabled={busy}
+                            >
                                 Enregistrer
                             </button>
                         </div>
                     </form>
 
                     <div className="d-flex flex-wrap gap-2 mt-3">
-                        <span className={`badge ${project.status === 'cloturé' ? 'text-bg-success' : 'text-bg-secondary'} fs-6`}>
+                        <span
+                            className={`badge ${project.status === 'cloturé' ? 'text-bg-success' : 'text-bg-secondary'} fs-6`}
+                        >
                             {project.status}
                         </span>
                         <button

@@ -1,12 +1,19 @@
-function AuthCard({ mode, busy, onLogin, onRegister, goToRegister, goToLogin }) {
+function AuthCard({
+    mode,
+    busy,
+    onLogin,
+    onRegister,
+    goToRegister,
+    goToLogin,
+}) {
     const [formData, setFormData] = React.useState(
         mode === 'register'
             ? { email: '', password: '', consent: false }
-            : { email: '', password: '' }
+            : { email: '', password: '' },
     );
 
     const handleChange = (field, value) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
+        setFormData((prev) => ({ ...prev, [field]: value }));
     };
 
     // login
@@ -14,7 +21,7 @@ function AuthCard({ mode, busy, onLogin, onRegister, goToRegister, goToLogin }) 
         event.preventDefault();
         await onLogin({
             email: formData.email.trim(),
-            password: formData.password
+            password: formData.password,
         });
     };
 
@@ -35,14 +42,20 @@ function AuthCard({ mode, busy, onLogin, onRegister, goToRegister, goToLogin }) 
             </div>
             <div className="card-body">
                 {mode === 'login' && (
-                    <form id="login-form" onSubmit={handleLoginSubmit} className="mb-0">
+                    <form
+                        id="login-form"
+                        onSubmit={handleLoginSubmit}
+                        className="mb-0"
+                    >
                         <div className="mb-3">
                             <label className="form-label">Email</label>
                             <input
                                 type="email"
                                 className="form-control"
                                 value={formData.email}
-                                onChange={(e) => handleChange('email', e.target.value)}
+                                onChange={(e) =>
+                                    handleChange('email', e.target.value)
+                                }
                                 required
                             />
                         </div>
@@ -53,13 +66,19 @@ function AuthCard({ mode, busy, onLogin, onRegister, goToRegister, goToLogin }) 
                                 type="password"
                                 className="form-control"
                                 value={formData.password}
-                                onChange={(e) => handleChange('password', e.target.value)}
+                                onChange={(e) =>
+                                    handleChange('password', e.target.value)
+                                }
                                 required
                             />
                         </div>
 
                         <div className="d-grid gap-2">
-                            <button type="submit" className="btn btn-primary" disabled={busy}>
+                            <button
+                                type="submit"
+                                className="btn btn-primary"
+                                disabled={busy}
+                            >
                                 Se connecter
                             </button>
                             <button
@@ -75,14 +94,20 @@ function AuthCard({ mode, busy, onLogin, onRegister, goToRegister, goToLogin }) 
                 )}
 
                 {mode === 'register' && (
-                    <form id="register-form" onSubmit={handleRegisterSubmit} className="mb-0">
+                    <form
+                        id="register-form"
+                        onSubmit={handleRegisterSubmit}
+                        className="mb-0"
+                    >
                         <div className="mb-3">
                             <label className="form-label">Email</label>
                             <input
                                 type="email"
                                 className="form-control"
                                 value={formData.email}
-                                onChange={(e) => handleChange('email', e.target.value)}
+                                onChange={(e) =>
+                                    handleChange('email', e.target.value)
+                                }
                                 required
                             />
                         </div>
@@ -93,7 +118,9 @@ function AuthCard({ mode, busy, onLogin, onRegister, goToRegister, goToLogin }) 
                                 type="password"
                                 className="form-control"
                                 value={formData.password}
-                                onChange={(e) => handleChange('password', e.target.value)}
+                                onChange={(e) =>
+                                    handleChange('password', e.target.value)
+                                }
                                 required
                             />
                         </div>
@@ -104,15 +131,24 @@ function AuthCard({ mode, busy, onLogin, onRegister, goToRegister, goToLogin }) 
                                 className="form-check-input"
                                 id="consentCheck"
                                 checked={formData.consent}
-                                onChange={(e) => handleChange('consent', e.target.checked)}
+                                onChange={(e) =>
+                                    handleChange('consent', e.target.checked)
+                                }
                             />
-                            <label className="form-check-label" htmlFor="consentCheck">
+                            <label
+                                className="form-check-label"
+                                htmlFor="consentCheck"
+                            >
                                 J'accepte le traitement de mes donnees
                             </label>
                         </div>
 
                         <div className="d-grid gap-2">
-                            <button type="submit" className="btn btn-primary" disabled={busy}>
+                            <button
+                                type="submit"
+                                className="btn btn-primary"
+                                disabled={busy}
+                            >
                                 Creer mon compte
                             </button>
                             <button

@@ -1,8 +1,31 @@
-# Kanban Project Manager - Architecture Microservices
+# Kanban Project Manager — Architecture Microservices
 
 Application de gestion de projet Kanban construite en **microservices** avec **Node.js**, **TypeScript**, **Express 5**, **Redis Streams** et **Docker Compose**.
 
 Évolution d'une TodoList monolithique vers une architecture distribuée event-driven.
+
+---
+
+## Table des matières
+
+1. [Architecture](#architecture)
+2. [Services](#services)
+3. [API](#api)
+4. [Frontend](#frontend)
+5. [Persistance](#persistance)
+6. [Événements (Redis Streams)](#événements-redis-streams)
+7. [Lancement](#lancement)
+8. [Variables d'environnement](#variables-denvironnement)
+9. [Tests](#tests)
+   - [Tests unitaires (Jest)](#tests-unitaires-jest)
+   - [Tests d'architecture](#tests-darchitecture)
+   - [Tests E2E (Playwright)](#tests-e2e-playwright)
+10. [Qualité de code](#qualité-de-code)
+11. [Tester le backend manuellement](#tester-le-backend-manuellement)
+12. [ADR](#adr)
+13. [Trello](#trello)
+
+---
 
 ## Architecture
 
@@ -23,7 +46,14 @@ Application de gestion de projet Kanban construite en **microservices** avec **N
                      └──────────────────┘
 ```
 
-### Services
+### Communication inter-services
+
+- **Synchrone (REST)** : le frontend appelle les services via le reverse-proxy Nginx ; le project-service appelle le task-service pour vérifier l'état des tâches avant clôture d'un projet.
+- **Asynchrone (Redis Streams)** : le task-service et le project-service publient des événements, le notification-service les consomme et les écrit dans un fichier de log.
+
+---
+
+## Services
 
 | Service | Port | Rôle | Base de données |
 |---------|------|------|-----------------|
@@ -32,20 +62,11 @@ Application de gestion de projet Kanban construite en **microservices** avec **N
 | **task-service** | 3003 | CRUD tâches, publication d'événements Redis | SQLite |
 | **notification-service** | 3004 | Écoute événements Redis, écriture log, envoi e-mail SMTP | Fichier de log |
 | **redis** | 6379 | Message broker (Redis Streams) | — |
-| **frontend** | 3000 | Interface web (Nginx + React CDN) | — |
+| **frontend** | 3000 | Interface web (Nginx reverse-proxy + React CDN) | — |
+| **mysql-tasks** | 3306 | Base MySQL pour les tâches *(profil `mysql`)* | MySQL 8 |
+| **mysql-projects** | 3307 | Base MySQL pour les projets *(profil `mysql`)* | MySQL 8 |
 
-### Communication inter-services
-
-- **Synchrone (REST)** : le frontend appelle les services via Nginx, le project-service appelle le task-service pour vérifier les tâches avant clôture
-- **Asynchrone (Redis Streams)** : le task-service et le project-service publient des événements, le notification-service les consomme
-
-### Événements
-
-| Événement | Producteur | Déclencheur |
-|-----------|------------|-------------|
-| `TaskCompleted` | task-service | Tâche passe à "terminé" |
-| `TaskReopened` | task-service | Tâche quitte "terminé" |
-| `ProjectCompleted` | project-service | Projet clôturé |
+---
 
 ## API
 
@@ -53,43 +74,131 @@ Application de gestion de projet Kanban construite en **microservices** avec **N
 
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| POST | `/auth/register` | Inscription (email, password, consent) |
-| POST | `/auth/login` | Connexion (retourne JWT) |
+| POST | `/auth/register` | Inscription (email, password, consent RGPD) |
+| POST | `/auth/login` | Connexion — retourne un JWT |
 | DELETE | `/auth/profile` | Suppression de compte (droit à l'oubli) |
 
 ### Project Service (`:3002`)
 
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/projects` | Liste les projets |
+| GET | `/projects` | Liste les projets de l'utilisateur |
 | GET | `/projects/:id` | Détail d'un projet |
 | POST | `/projects` | Crée un projet |
-| PUT | `/projects/:id` | Met à jour / clôture un projet |
+| PUT | `/projects/:id` | Met à jour / clôture / réouvre un projet |
 | DELETE | `/projects/:id` | Supprime un projet |
+
+> La clôture (`status: "terminé"`) vérifie en REST synchrone que **toutes** les tâches du projet sont terminées. Si ce n'est pas le cas, la requête est rejetée (400).
 
 ### Task Service (`:3003`)
 
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
 | GET | `/tasks` | Liste toutes les tâches |
-| GET | `/tasks/by-project?projectId=xxx` | Tâches d'un projet |
+| GET | `/tasks/by-project?projectId=xxx` | Tâches d'un projet donné |
 | POST | `/tasks` | Crée une tâche |
-| PUT | `/tasks/:id` | Met à jour une tâche |
+| PUT | `/tasks/:id` | Met à jour une tâche (status : `à faire` / `en cours` / `terminé`) |
 | DELETE | `/tasks/:id` | Supprime une tâche |
+
+### Notification Service (`:3004`)
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/health` | Health check |
+
+---
+
+## Frontend
+
+| Aspect | Détail |
+|--------|--------|
+| **Runtime** | React 19 (CDN) + Babel standalone (pas de build) |
+| **Serveur** | Nginx Alpine (reverse-proxy + fichiers statiques) |
+| **Routing** | SPA avec `window.history.pushState` (`/login`, `/register`, `/projects`, `/projects/:id`) |
+| **Auth** | JWT stocké dans `localStorage`, user ID décodé côté client |
+| **Pages** | `LoginPage`, `RegisterPage`, `DashboardPage`, `ProjectPage` |
+| **Composants** | `App`, `AuthCard`, `TodoListCard` |
+| **Utilitaires** | `navigation.js` — `buildHeaders`, `parseApiResponse`, `getUserIdFromToken`, `normalizePath`, `matchProjectPath` |
+
+### Proxy Nginx
+
+Le fichier `frontend/nginx.conf` route les appels API :
+
+| Pattern URL | Service cible |
+|-------------|---------------|
+| `/api/projects*` | `http://project-service:3002` |
+| `/api/tasks*` | `http://task-service:3003` |
+| `/api/auth/*` | `http://auth-service:3001` |
+
+Le préfixe `/api` est retiré avant le forward (`rewrite ^/api(/.*)$ $1 break`).
+
+---
+
+## Persistance
+
+L'application utilise un **pattern Repository** avec 3 implémentations interchangeables :
+
+| Implémentation | Quand | Fichier |
+|----------------|-------|---------|
+| **In-memory** | `NODE_ENV=test` (tests unitaires) | `persistence/inmemory.ts` |
+| **SQLite** | Par défaut en production | `persistence/sqlite.ts` |
+| **MySQL** | `DB_TYPE=mysql` | `persistence/mysql.ts` |
+
+La sélection se fait automatiquement dans `persistence/index.ts` :
+
+```typescript
+if (process.env.NODE_ENV === 'test') repository = inmemoryRepo;
+else if (process.env.DB_TYPE === 'mysql') repository = mysqlRepo;
+else repository = sqliteRepo;
+```
+
+---
+
+## Événements (Redis Streams)
+
+| Événement | Stream | Producteur | Déclencheur |
+|-----------|--------|------------|-------------|
+| `TaskCompleted` | `task-events` | task-service | Tâche passe à `terminé` |
+| `TaskReopened` | `task-events` | task-service | Tâche quitte `terminé` |
+| `ProjectCompleted` | `project-events` | project-service | Projet clôturé avec succès |
+
+Le **notification-service** consomme ces streams en continu et écrit les événements dans un fichier de log (`/app/logs/notifications.log`).
+
+---
 
 ## Lancement
 
 ### Prérequis
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installé et lancé
+- [Node.js](https://nodejs.org/) ≥ 18 (pour les tests en local)
+- [pnpm](https://pnpm.io/) ou npm
 
-### Démarrage
+### Démarrage (SQLite — défaut)
 
 ```bash
 docker compose up --build
 ```
 
-L'application est accessible sur `http://localhost:3000`.
+### Démarrage avec MySQL
+
+Créer un fichier `.env` à la racine en copiant le fichier `.env.example` :
+
+```env
+DB_TYPE=sqlite
+```
+
+Puis lancer avec le profil `mysql`, en modifiant la variable d'environnement puis faire :
+
+```bash
+docker compose --profile mysql up --build
+```
+
+> Les conteneurs `mysql-tasks` (port 3306) et `mysql-projects` (port 3307) démarrent uniquement avec ce profil.
+
+### Accès à l'application
+
+L'application est accessible sur **[http://localhost:3000](http://localhost:3000)**.
 
 ### Arrêt
 
@@ -97,82 +206,27 @@ L'application est accessible sur `http://localhost:3000`.
 docker compose down
 ```
 
-Pour supprimer aussi les données persistées :
+Pour supprimer aussi les données persistées (volumes) :
 
 ```bash
 docker compose down -v
 ```
 
-## Tests
-
-```bash
-# Tous les tests depuis la racine
-pnpm test ou npm test
-
-# Tests d'un service spécifique
-cd services/task-service && npx jest --verbose
-cd services/project-service && npx jest --verbose
-
-# Tests e2e
-npx playwright test
-```
-
-### Couverture des tests (9 tests)
-
-| Test | Service | Use case |
-|------|---------|----------|
-| Créer un projet | project-service | UC1 |
-| Créer une tâche associée à un projet | task-service | UC2 |
-| Marquer une tâche comme terminée | task-service | UC3 |
-| Refuser un status invalide | task-service | UC3 |
-| Clôturer un projet (tâches terminées) | project-service | UC4 |
-| Refuser clôture (tâches non terminées) | project-service | UC4 |
-| Refuser clôture (aucune tâche) | project-service | UC4 |
-| Aucun test n'importe sqlite3 directement | architecture | Isolation |
-| Tests de controllers mockent la persistence | architecture | Isolation |
-
-## Structure du projet
-
-```
-projet_initial_archi/
-├── services/
-│   ├── auth-service/          # Authentification JWT
-│   │   ├── src/
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   └── Dockerfile
-│   ├── project-service/       # Gestion de projets
-│   │   ├── src/
-│   │   ├── spec/
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   └── Dockerfile
-│   ├── task-service/          # Gestion de tâches
-│   │   ├── src/
-│   │   ├── spec/
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   └── Dockerfile
-│   └── notification-service/  # Consommateur d'événements
-│       ├── src/
-│       ├── package.json
-│       ├── tsconfig.json
-│       └── Dockerfile
-├── frontend/                  # Interface web (Nginx)
-├── spec/                      # Tests d'architecture
-├── Documentions/              # ADR (décisions d'architecture)
-├── docker-compose.yml
-└── README.md
-```
+---
 
 ## Variables d'environnement
 
-| Variable | Service | Description | Défaut |
-|----------|---------|-------------|--------|
+| Variable | Service(s) | Description | Valeur par défaut |
+|----------|-----------|-------------|-------------------|
+| `DB_TYPE` | project, task | Mode de persistance : `sqlite` ou `mysql` | `sqlite` |
 | `JWT_SECRET` | auth, project, task | Clé secrète JWT | `SECRET_KEY` |
-| `SQLITE_DB_LOCATION` | project, task | Chemin fichier SQLite | `/etc/*/_.db` |
-| `REDIS_HOST` | task, project, notification | Hôte Redis | `localhost` |
-| `TASK_SERVICE_URL` | project | URL du task-service | — |
+| `SQLITE_DB_LOCATION` | project, task | Chemin du fichier SQLite | `/app/data/*.db` |
+| `MYSQL_HOST` | project, task | Hôte MySQL | `mysql-projects` / `mysql-tasks` |
+| `MYSQL_USER` | project, task | Utilisateur MySQL | `root` |
+| `MYSQL_PASSWORD` | project, task | Mot de passe MySQL | `root` |
+| `MYSQL_DB` | project, task | Nom de la base MySQL | `projects` / `tasks` |
+| `REDIS_HOST` | project, task, notification | Hôte Redis | `redis` |
+| `TASK_SERVICE_URL` | project | URL interne du task-service | `http://task-service:3003` |
 | `LOG_FILE` | notification | Chemin du fichier de log | `/app/logs/notifications.log` |
 | `SMTP_HOST` | notification | Hôte SMTP | — |
 | `SMTP_PORT` | notification | Port SMTP | `465` |
@@ -184,37 +238,175 @@ projet_initial_archi/
 | `AUTH_SERVICE_URL` | notification | URL auth-service (resolution email utilisateur) | `http://auth-service:3001` |
 | `PROJECT_SERVICE_URL` | notification | URL project-service (resolution owner du projet) | `http://project-service:3002` |
 
+| `NODE_ENV` | project, task | `test` → utilise la persistence in-memory | — |
+
+---
+
+## Tests
+
+### Vue d'ensemble
+
+| Type | Framework | Commande | Répertoire |
+|------|-----------|----------|------------|
+| **Unitaires** | Jest 30 + ts-jest | `npm test` | `services/*/spec/` |
+| **Architecture** | Jest 30 | `npm test` | `spec/architecture/` |
+| **E2E** | Playwright 1.58 | `npx playwright test` | `tests-e2e/` |
+
+---
+
+### Tests unitaires (Jest)
+
+Les tests unitaires vérifient les **controllers** de chaque service en **mockant la couche persistence** (pattern Repository) et les événements Redis.
+
+#### Lancer tous les tests unitaires + architecture
+
+```bash
+npm test
+# ou
+pnpm test
+```
+
+#### Lancer les tests d'un service spécifique
+
+```bash
+# project-service uniquement
+cd services/project-service; npx jest --verbose
+
+# task-service uniquement
+cd services/task-service; npx jest --verbose
+```
+
+#### Détail des tests unitaires (7 tests)
+
+| # | Test | Fichier | Service | Use case |
+|---|------|---------|---------|----------|
+| 1 | Créer un projet | `addProject.spec.ts` | project-service | UC1 |
+| 2 | Clôturer un projet (tâches terminées) | `updateProject.spec.ts` | project-service | UC4 |
+| 3 | Refuser clôture (tâches non terminées) | `updateProject.spec.ts` | project-service | UC4 |
+| 4 | Refuser clôture (aucune tâche) | `updateProject.spec.ts` | project-service | UC4 |
+| 5 | Créer une tâche associée à un projet | `addTask.spec.ts` | task-service | UC2 |
+| 6 | Marquer une tâche comme terminée | `updateTask.spec.ts` | task-service | UC3 |
+| 7 | Refuser un status invalide | `updateTask.spec.ts` | task-service | UC3 |
+
+#### Principes de test
+
+- Chaque test de controller **mocke** `persistence/index` via `jest.mock()` → aucune dépendance à SQLite/MySQL.
+- Les événements Redis (`events/publisher`) sont aussi mockés.
+- Le project-service mocke `global.fetch` pour simuler les appels au task-service.
+
+---
+
+### Tests d'architecture
+
+Situés dans `spec/architecture/no-sqlite-in-tests.spec.ts`, ces 2 tests vérifient :
+
+| # | Test | Description |
+|---|------|-------------|
+| 1 | Aucun import sqlite3 dans les tests | Aucun fichier `*.spec.ts` de controller ne doit contenir `require('sqlite3')` ou `from 'sqlite3'` |
+| 2 | Les controllers mockent la persistence | Tout test de controller doit contenir `jest.mock(...persistence...)` |
+
+---
+
+### Tests E2E (Playwright)
+
+Les tests end-to-end vérifient le **workflow complet** via le navigateur, de l'inscription à la suppression du compte.
+
+#### Prérequis
+
+1. L'application doit tourner (`docker compose up --build`)
+2. Installer les navigateurs Playwright (une seule fois) :
+
+```bash
+npx playwright install
+```
+
+#### Lancer les tests E2E
+
+```bash
+npx playwright test
+```
+
+#### Configuration Playwright
+
+| Paramètre | Valeur |
+|-----------|--------|
+| `testDir` | `./tests-e2e` |
+| `baseURL` | `http://localhost:3000` |
+| `timeout` | 10 000 ms |
+| `headless` | `true` |
+| `screenshot` | Sur échec uniquement |
+| `video` | Conservé sur échec |
+| `retries` | 0 |
+
+#### Détail des tests E2E (13 tests)
+
+| # | Test | Scénario |
+|---|------|----------|
+| 1 | Inscription | Créer un compte avec email, mot de passe et consentement RGPD |
+| 2 | Connexion | S'inscrire puis se connecter — redirection vers le dashboard |
+| 3 | Création projet | Créer un nouveau projet depuis le dashboard |
+| 4 | Création tâche | Ajouter une tâche à un projet |
+| 5 | Complétion tâche | Marquer une tâche comme terminée (bouton "Terminer") |
+| 6 | Clôture projet | Clôturer un projet dont toutes les tâches sont terminées |
+| 7 | Refus clôture | Tentative de clôture avec tâches non terminées → message d'erreur |
+| 8 | Blocage ajout tâche | Impossible d'ajouter une tâche sur un projet clôturé (champs désactivés) |
+| 9 | Réouverture projet | Réouvrir un projet clôturé → le formulaire de tâche redevient actif |
+| 10 | Suppression tâche | Supprimer une tâche et vérifier qu'elle disparaît |
+| 11 | Suppression projet | Supprimer un projet depuis la liste |
+| 12 | Suppression utilisateur | Supprimer son compte (droit à l'oubli) → retour au login |
+| 13 | Vérification logs notification-service | Vérifie que le notification-service a bien reçu les événements (`EVENT → Tâche terminée :`) |
+
+---
+
+## Qualité de code
+
+| Outil | Commande | Fichier de config |
+|-------|----------|-------------------|
+| **ESLint** | `npm run lint` | `eslint.config.mjs` |
+| **Prettier** | `npm run prettify` | Section `prettier` dans `package.json` |
+
+### Configuration Prettier
+
+```json
+{
+  "trailingComma": "all",
+  "tabWidth": 4,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": true
+}
+```
+
+---
 ## Tester le backend manuellement
 
 ```bash
 # Créer un projet
 curl -X POST http://localhost:3002/projects \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"Mon projet\",\"description\":\"Test kanban\"}"
+  -d '{"name":"Mon projet","description":"Test kanban"}'
 
 # Créer une tâche
 curl -X POST http://localhost:3003/tasks \
   -H "Content-Type: application/json" \
-  -d "{\"title\":\"Ma tâche\",\"status\":\"à faire\",\"projectId\":\"<ID_PROJET>\"}"
+  -d '{"title":"Ma tâche","status":"à faire","projectId":"<ID_PROJET>"}'
 
 # Marquer la tâche comme terminée (déclenche TaskCompleted)
 curl -X PUT http://localhost:3003/tasks/<ID_TACHE> \
   -H "Content-Type: application/json" \
-  -d "{\"status\":\"terminé\"}"
+  -d '{"status":"terminé"}'
 
 # Clôturer le projet (déclenche ProjectCompleted)
 curl -X PUT http://localhost:3002/projects/<ID_PROJET> \
   -H "Content-Type: application/json" \
-  -d "{\"status\":\"terminé\"}"
+  -d '{"status":"terminé"}'
 
 # Voir les logs de notification
 docker compose logs notification-service
 ```
 
-## ADR
-
-Les décisions d'architecture sont documentées dans le dossier `Documentions/`.
+---
 
 ## Trello
 
-https://trello.com/b/uRypyONb/projetinitialarchi
+[https://trello.com/b/uRypyONb/projetinitialarchi](https://trello.com/b/uRypyONb/projetinitialarchi)

@@ -7,7 +7,7 @@ services:
             - ./services/auth-service/src:/app/src
             - auth-data:/app/data
         environment:
-            - JWT_SECRET=SECRET_KEY
+            - JWT_SECRET=${JWT_SECRET}
             - SQLITE_DB_LOCATION=/app/data/auth.db
 
     project-service:
@@ -18,10 +18,15 @@ services:
             - ./services/project-service/src:/app/src
             - project-data:/app/data
         environment:
-            - JWT_SECRET=SECRET_KEY
+            - JWT_SECRET=${JWT_SECRET}
+            - DB_TYPE=${DB_TYPE:-sqlite}
             - SQLITE_DB_LOCATION=/app/data/projects.db
             - TASK_SERVICE_URL=http://task-service:3003
             - REDIS_HOST=redis
+            - MYSQL_HOST=mysql-projects
+            - MYSQL_USER=${MYSQL_USER}
+            - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+            - MYSQL_DB=projects
         depends_on:
             - redis
 
@@ -33,9 +38,14 @@ services:
             - ./services/task-service/src:/app/src
             - task-data:/app/data
         environment:
-            - JWT_SECRET=SECRET_KEY
+            - JWT_SECRET=${JWT_SECRET}
+            - DB_TYPE=${DB_TYPE:-sqlite}
             - SQLITE_DB_LOCATION=/app/data/tasks.db
             - REDIS_HOST=redis
+            - MYSQL_HOST=mysql-tasks
+            - MYSQL_USER=${MYSQL_USER}
+            - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+            - MYSQL_DB=tasks
         depends_on:
             - redis
 
@@ -49,17 +59,41 @@ services:
         environment:
             - REDIS_HOST=redis
             - LOG_FILE=/app/logs/notifications.log
-            - SMTP_HOST=smtp.hostinger.com
-            - SMTP_PORT=465
-            - SMTP_SECURE=true
-            - SMTP_USER=kaban@theo-saly.com
-            - SMTP_FROM=kaban@theo-saly.com
-            - SMTP_RECIPIENT=kaban@theo-saly.com
-            - "SMTP_PASS=!Kaban2026"
+            - SMTP_HOST=${SMTP_HOST}
+            - SMTP_PORT=${SMTP_PORT}
+            - SMTP_SECURE=${SMTP_SECURE}
+            - SMTP_USER=${SMTP_USER}
+            - SMTP_PASS=${SMTP_PASS}
+            - SMTP_FROM=${SMTP_FROM}
+            - SMTP_RECIPIENT=${SMTP_RECIPIENT}
             - AUTH_SERVICE_URL=http://auth-service:3001
             - PROJECT_SERVICE_URL=http://project-service:3002
         depends_on:
             - redis
+
+    mysql-tasks:
+        image: mysql:8
+        environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+            MYSQL_DATABASE: tasks
+        ports:
+            - '3308:3306'
+        volumes:
+            - mysql-tasks-data:/var/lib/mysql
+        profiles:
+            - mysql
+
+    mysql-projects:
+        image: mysql:8
+        environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+            MYSQL_DATABASE: projects
+        ports:
+            - '3309:3306'
+        volumes:
+            - mysql-projects-data:/var/lib/mysql
+        profiles:
+            - mysql
 
     redis:
         image: redis:7-alpine
@@ -83,3 +117,5 @@ volumes:
     project-data:
     task-data:
     notification-logs:
+    mysql-tasks-data:
+    mysql-projects-data:

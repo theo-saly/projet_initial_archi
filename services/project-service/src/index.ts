@@ -10,7 +10,9 @@ routes(app);
 
 db.init()
     .then(() => {
-        app.listen(3002, () => console.log('Project service listening on port 3002'));
+        app.listen(3002, () =>
+            console.log('Project service listening on port 3002'),
+        );
     })
     .catch((err) => {
         console.error(err);

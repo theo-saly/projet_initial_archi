@@ -16,7 +16,9 @@ async function registerUser(page, email, password) {
     await page.click('#register-form button[type="submit"]');
 
     await expect(page.locator('#login-form')).toBeVisible();
-    await expect(page.locator('.alert-success')).toContainText('Compte créé. Vous pouvez maintenant vous connecter.');
+    await expect(page.locator('.alert-success')).toContainText(
+        'Compte créé. Vous pouvez maintenant vous connecter.',
+    );
 }
 
 async function loginUser(page, email, password) {
@@ -31,8 +33,14 @@ async function loginUser(page, email, password) {
 }
 
 async function createProject(page, projectName) {
-    await page.fill('input[placeholder="Ex: Refonte espace client"]', projectName);
-    await page.fill('input[placeholder="Objectif du projet"]', 'Validation du workflow complet');
+    await page.fill(
+        'input[placeholder="Ex: Refonte espace client"]',
+        projectName,
+    );
+    await page.fill(
+        'input[placeholder="Objectif du projet"]',
+        'Validation du workflow complet',
+    );
     await page.click('button:has-text("Ajouter")');
 
     await expect(page.getByText('Focus projet')).toBeVisible();
@@ -42,10 +50,15 @@ async function createTask(page, taskTitle) {
     await expect(page.locator('#task-form')).toBeVisible();
 
     await page.locator('#task-form input').first().fill(taskTitle);
-    await page.locator('#task-form input').nth(1).fill('Realiser la premiere tache du projet');
+    await page
+        .locator('#task-form input')
+        .nth(1)
+        .fill('Realiser la premiere tache du projet');
     await page.click('#task-form button[type="submit"]');
 
-    await expect(page.locator('article.task-item h3', { hasText: taskTitle })).toBeVisible();
+    await expect(
+        page.locator('article.task-item h3', { hasText: taskTitle }),
+    ).toBeVisible();
 }
 
 async function completeTask(page, taskTitle) {
@@ -128,7 +141,9 @@ test.describe('Workflow Front E2E', () => {
 
         await completeTask(page, taskTitle);
         await page.getByRole('button', { name: 'Cloturer le projet' }).click();
-        await expect(page.locator('.alert-success')).toContainText('Le projet a bien été cloturé.');
+        await expect(page.locator('.alert-success')).toContainText(
+            'Le projet a bien été cloturé.',
+        );
         await expect(page.locator('span.badge.fs-6')).toContainText('cloturé');
     });
 
@@ -146,11 +161,15 @@ test.describe('Workflow Front E2E', () => {
 
         await page.getByRole('button', { name: 'Cloturer le projet' }).click();
 
-        await expect(page.locator('.alert-danger')).toContainText('Toutes les tâches doivent être terminées pour clôturer le projet');
+        await expect(page.locator('.alert-danger')).toContainText(
+            'Toutes les tâches doivent être terminées pour clôturer le projet',
+        );
         await expect(page.locator('span.badge.fs-6')).toContainText('ouvert');
     });
 
-    test('Impossible d ajouter une tache si projet cloture', async ({ page }) => {
+    test('Impossible d ajouter une tache si projet cloture', async ({
+        page,
+    }) => {
         const seed = Date.now();
         const email = `e2e.${seed}@example.com`;
         const password = 'Passw0rd!';
@@ -165,11 +184,15 @@ test.describe('Workflow Front E2E', () => {
         await completeTask(page, taskTitle);
         await page.getByRole('button', { name: 'Cloturer le projet' }).click();
 
-        await expect(page.locator('.alert-warning')).toContainText('Ce projet est clôturé: vous ne pouvez plus ajouter de nouvelles taches.');
+        await expect(page.locator('.alert-warning')).toContainText(
+            'Ce projet est clôturé: vous ne pouvez plus ajouter de nouvelles taches.',
+        );
         await expect(page.locator('#task-form input').first()).toBeDisabled();
         await expect(page.locator('#task-form input').nth(1)).toBeDisabled();
         await expect(page.locator('#task-form select')).toBeDisabled();
-        await expect(page.locator('#task-form button[type="submit"]')).toBeDisabled();
+        await expect(
+            page.locator('#task-form button[type="submit"]'),
+        ).toBeDisabled();
 
         await expect(page.locator('article.task-item')).toHaveCount(1);
     });
@@ -192,9 +215,13 @@ test.describe('Workflow Front E2E', () => {
 
         await page.getByRole('button', { name: 'Reouvrir le projet' }).click();
 
-        await expect(page.locator('.alert-success')).toContainText('Le projet a bien été ouvert.');
+        await expect(page.locator('.alert-success')).toContainText(
+            'Le projet a bien été ouvert.',
+        );
         await expect(page.locator('span.badge.fs-6')).toContainText('ouvert');
-        await expect(page.locator('#task-form button[type="submit"]')).toBeEnabled();
+        await expect(
+            page.locator('#task-form button[type="submit"]'),
+        ).toBeEnabled();
     });
 
     test('Suppression tache', async ({ page }) => {
@@ -217,7 +244,9 @@ test.describe('Workflow Front E2E', () => {
         await taskItem.locator('button:has-text("Supprimer")').click();
 
         await expect(page.locator('article.task-item')).toHaveCount(0);
-        await expect(page.locator('.alert-success')).toContainText('Tache supprimee.');
+        await expect(page.locator('.alert-success')).toContainText(
+            'Tache supprimee.',
+        );
     });
 
     test('Suppression projet', async ({ page }) => {
@@ -232,14 +261,19 @@ test.describe('Workflow Front E2E', () => {
 
         await page.getByRole('button', { name: 'Retour a la liste' }).click();
         await expect(page.getByText('Liste des projets')).toBeVisible();
-        
+
         const projectRow = page.locator('tr').filter({
             hasText: projectName,
         });
-        
-        await projectRow.locator('button:has-text("Supprimer")').first().click();
 
-        await expect(page.locator('.alert-success')).toContainText('Votre projet a bien été supprimé.');
+        await projectRow
+            .locator('button:has-text("Supprimer")')
+            .first()
+            .click();
+
+        await expect(page.locator('.alert-success')).toContainText(
+            'Votre projet a bien été supprimé.',
+        );
     });
 
     test('Suppression utilisateur', async ({ page }) => {
@@ -251,19 +285,26 @@ test.describe('Workflow Front E2E', () => {
         await loginUser(page, email, password);
         await expect(page.getByText('Liste des projets')).toBeVisible();
 
-        await page.getByRole('button', { name: 'Supprimer mon compte' }).click();
+        await page
+            .getByRole('button', { name: 'Supprimer mon compte' })
+            .click();
 
         await expect(page.locator('#login-form')).toBeVisible();
-        await expect(page.locator('.alert-success')).toContainText('Votre compte a bien été supprimé.');
+        await expect(page.locator('.alert-success')).toContainText(
+            'Votre compte a bien été supprimé.',
+        );
     });
 
     test('Check log notification-service', async () => {
-        const logs = execSync('docker compose logs --no-color --tail=200 notification-service', {
-            encoding: 'utf-8',
-        });
+        const logs = execSync(
+            'docker compose logs --no-color --tail=200 notification-service',
+            {
+                encoding: 'utf-8',
+            },
+        );
 
         expect(logs).toContain('Notification service listening on port 3004');
-        
+
         expect(logs).toMatch(/EVENT → Tâche terminée :/);
     });
 });

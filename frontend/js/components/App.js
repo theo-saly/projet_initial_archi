@@ -1,10 +1,10 @@
 function App() {
     // JWT
     const [token, setToken] = React.useState(
-        () => localStorage.getItem('authToken') || ''
+        () => localStorage.getItem('authToken') || '',
     );
-    const [path, setPath] = React.useState(
-        () => normalizePath(window.location.pathname)
+    const [path, setPath] = React.useState(() =>
+        normalizePath(window.location.pathname),
     );
     const [message, setMessage] = React.useState({ type: '', text: '' });
     const [busy, setBusy] = React.useState(false);
@@ -65,7 +65,12 @@ function App() {
         }
 
         // default
-        if (!isAuthPath && !isProjectListPath && !isProjectFocusPath && path !== '/') {
+        if (
+            !isAuthPath &&
+            !isProjectListPath &&
+            !isProjectFocusPath &&
+            path !== '/'
+        ) {
             navigate(token ? '/projects' : '/login');
         }
     }, [token, path]);
@@ -127,7 +132,10 @@ function App() {
             });
 
             await parseApiResponse(response);
-            pushMessage('success', 'Compte créé. Vous pouvez maintenant vous connecter.');
+            pushMessage(
+                'success',
+                'Compte créé. Vous pouvez maintenant vous connecter.',
+            );
             navigate('/login');
         } catch (err) {
             pushMessage('danger', err.message);
@@ -154,7 +162,10 @@ function App() {
 
             const data = await parseApiResponse(res);
             setToken('');
-            pushMessage('success', data.message || 'Votre compte à bien été supprimé.');
+            pushMessage(
+                'success',
+                data.message || 'Votre compte à bien été supprimé.',
+            );
             navigate('/login');
         } catch (err) {
             pushMessage('danger', err.message);
@@ -169,7 +180,9 @@ function App() {
                 <header className="topbar container-fluid py-3 px-3 px-md-4">
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                         <div>
-                            <div className="brand-mark">Kanban Project Manager</div>
+                            <div className="brand-mark">
+                                Kanban Project Manager
+                            </div>
                             <small className="text-muted">
                                 Par Saly Théo & Inacio Rodrigues
                             </small>

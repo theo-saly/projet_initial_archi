@@ -22,12 +22,16 @@ export default async (req, res) => {
                 `${TASK_SERVICE_URL}/tasks/by-project?projectId=${req.params.id}`,
             );
             if (!response.ok) {
-                return res.status(503).json({ error: 'Service des tâches indisponible' });
+                return res
+                    .status(503)
+                    .json({ error: 'Service des tâches indisponible' });
             }
-            const tasks = await response.json() as TaskDTO[];
+            const tasks = (await response.json()) as TaskDTO[];
 
             if (tasks.length === 0) {
-                return res.status(400).json({ error: 'Aucune tâche dans ce projet' });
+                return res
+                    .status(400)
+                    .json({ error: 'Aucune tâche dans ce projet' });
             }
 
             const allDone = tasks.every((t) => t.status === 'terminé');
@@ -37,7 +41,9 @@ export default async (req, res) => {
                 });
             }
         } catch {
-            return res.status(503).json({ error: 'Service des tâches indisponible' });
+            return res
+                .status(503)
+                .json({ error: 'Service des tâches indisponible' });
         }
     }
 

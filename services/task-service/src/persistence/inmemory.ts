@@ -20,7 +20,9 @@ async function getTask(id: string): Promise<Task | undefined> {
 }
 
 async function getTasksByProject(projectId: string): Promise<Task[]> {
-    return tasks.filter((t) => t.projectId === projectId).map((t) => ({ ...t }));
+    return tasks
+        .filter((t) => t.projectId === projectId)
+        .map((t) => ({ ...t }));
 }
 
 async function storeTask(task: Task): Promise<void> {

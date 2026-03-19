@@ -60,10 +60,14 @@ async function getTask(id: string): Promise<Task | undefined> {
 
 async function getTasksByProject(projectId: string): Promise<Task[]> {
     return new Promise((acc, rej) => {
-        db.all('SELECT * FROM tasks WHERE projectId=?', [projectId], (err, rows) => {
-            if (err) return rej(err);
-            acc(rows as Task[]);
-        });
+        db.all(
+            'SELECT * FROM tasks WHERE projectId=?',
+            [projectId],
+            (err, rows) => {
+                if (err) return rej(err);
+                acc(rows as Task[]);
+            },
+        );
     });
 }
 

@@ -42,10 +42,14 @@ async function teardown() {
 
 async function getProjects(ownerId: string): Promise<Project[]> {
     return new Promise((acc, rej) => {
-        db.all('SELECT * FROM projects WHERE ownerId=?', [ownerId], (err, rows) => {
-            if (err) return rej(err);
-            acc(rows as Project[]);
-        });
+        db.all(
+            'SELECT * FROM projects WHERE ownerId=?',
+            [ownerId],
+            (err, rows) => {
+                if (err) return rej(err);
+                acc(rows as Project[]);
+            },
+        );
     });
 }
 

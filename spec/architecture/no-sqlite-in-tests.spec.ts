@@ -24,7 +24,10 @@ describe("Architecture: isolation de l'infrastructure", () => {
     const servicesDir = path.resolve(__dirname, '..', '..', 'services');
 
     test('aucun test de controller ne doit importer sqlite3 directement', () => {
-        const testFiles = getTestFiles(servicesDir, ['node_modules', 'persistence']);
+        const testFiles = getTestFiles(servicesDir, [
+            'node_modules',
+            'persistence',
+        ]);
 
         expect(testFiles.length).toBeGreaterThan(0);
 
@@ -37,8 +40,9 @@ describe("Architecture: isolation de l'infrastructure", () => {
     });
 
     test('les tests de controllers doivent mocker la couche persistence', () => {
-        const testFiles = getTestFiles(servicesDir, ['node_modules'])
-            .filter((f) => f.includes('controllers'));
+        const testFiles = getTestFiles(servicesDir, ['node_modules']).filter(
+            (f) => f.includes('controllers'),
+        );
 
         expect(testFiles.length).toBeGreaterThan(0);
 

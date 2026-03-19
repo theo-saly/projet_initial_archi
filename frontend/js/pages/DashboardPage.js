@@ -120,7 +120,6 @@ function DashboardPage({ token, navigate, busy, setBusy, pushMessage }) {
         }
     };
 
-
     if (loading) {
         return <p className="text-muted">Chargement des projets...</p>;
     }
@@ -136,7 +135,9 @@ function DashboardPage({ token, navigate, busy, setBusy, pushMessage }) {
                             <input
                                 className="form-control"
                                 value={form.name}
-                                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                onChange={(e) =>
+                                    setForm({ ...form, name: e.target.value })
+                                }
                                 placeholder="Ex: Refonte espace client"
                                 required
                                 disabled={busy}
@@ -147,15 +148,26 @@ function DashboardPage({ token, navigate, busy, setBusy, pushMessage }) {
                             <input
                                 className="form-control"
                                 value={form.description}
-                                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                                onChange={(e) =>
+                                    setForm({
+                                        ...form,
+                                        description: e.target.value,
+                                    })
+                                }
                                 placeholder="Objectif du projet"
                                 required
                                 disabled={busy}
                             />
                         </div>
                         <div className="col-12 col-md-2 d-grid">
-                            <label className="form-label d-none d-md-block">&nbsp;</label>
-                            <button className="btn btn-primary" type="submit" disabled={busy}>
+                            <label className="form-label d-none d-md-block">
+                                &nbsp;
+                            </label>
+                            <button
+                                className="btn btn-primary"
+                                type="submit"
+                                disabled={busy}
+                            >
                                 Ajouter
                             </button>
                         </div>
@@ -167,7 +179,9 @@ function DashboardPage({ token, navigate, busy, setBusy, pushMessage }) {
                 <div className="card-header">Liste des projets</div>
                 <div className="card-body p-0">
                     {projects.length === 0 && (
-                        <div className="p-4 text-muted">Aucun projet pour le moment.</div>
+                        <div className="p-4 text-muted">
+                            Aucun projet pour le moment.
+                        </div>
                     )}
                     {projects.length > 0 && (
                         <div className="table-responsive">
@@ -183,10 +197,16 @@ function DashboardPage({ token, navigate, busy, setBusy, pushMessage }) {
                                 <tbody>
                                     {projects.map((project) => (
                                         <tr key={project.id}>
-                                            <td className="fw-semibold">{project.name}</td>
-                                            <td className="text-muted">{project.description}</td>
+                                            <td className="fw-semibold">
+                                                {project.name}
+                                            </td>
+                                            <td className="text-muted">
+                                                {project.description}
+                                            </td>
                                             <td>
-                                                <span className={`badge ${project.status === 'cloturé' ? 'text-bg-success' : 'text-bg-secondary'}`}>
+                                                <span
+                                                    className={`badge ${project.status === 'cloturé' ? 'text-bg-success' : 'text-bg-secondary'}`}
+                                                >
                                                     {project.status}
                                                 </span>
                                             </td>
@@ -195,7 +215,11 @@ function DashboardPage({ token, navigate, busy, setBusy, pushMessage }) {
                                                     <button
                                                         type="button"
                                                         className="btn btn-outline-primary btn-sm"
-                                                        onClick={() => navigate(`/projects/${project.id}`)}
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/projects/${project.id}`,
+                                                            )
+                                                        }
                                                         disabled={busy}
                                                     >
                                                         Ouvrir
@@ -203,15 +227,26 @@ function DashboardPage({ token, navigate, busy, setBusy, pushMessage }) {
                                                     <button
                                                         type="button"
                                                         className="btn btn-outline-secondary btn-sm"
-                                                        onClick={() => toggleProjectStatus(project)}
+                                                        onClick={() =>
+                                                            toggleProjectStatus(
+                                                                project,
+                                                            )
+                                                        }
                                                         disabled={busy}
                                                     >
-                                                        {project.status === 'cloturé' ? 'Reouvrir' : 'Cloturer'}
+                                                        {project.status ===
+                                                        'cloturé'
+                                                            ? 'Reouvrir'
+                                                            : 'Cloturer'}
                                                     </button>
                                                     <button
                                                         type="button"
                                                         className="btn btn-outline-danger btn-sm"
-                                                        onClick={() => deleteProject(project.id)}
+                                                        onClick={() =>
+                                                            deleteProject(
+                                                                project.id,
+                                                            )
+                                                        }
                                                         disabled={busy}
                                                     >
                                                         Supprimer
