@@ -3,22 +3,75 @@ import { execSync } from 'node:child_process';
 
 const BASE_URL = 'http://localhost:3000';
 
+async function registerUser(page, email, password) {
+    await page.goto(BASE_URL);
+    await expect(page.locator('#login-form')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Creer un compte' }).click();
+    await expect(page.locator('#register-form')).toBeVisible();
+
+    await page.fill('#register-form input[type="email"]', email);
+    await page.fill('#register-form input[type="password"]', password);
+    await page.check('#consentCheck');
+    await page.click('#register-form button[type="submit"]');
+
+    await expect(page.locator('#login-form')).toBeVisible();
+    await expect(page.locator('.alert-success')).toContainText('Compte créé. Vous pouvez maintenant vous connecter.');
+}
+
+async function loginUser(page, email, password) {
+    await page.goto(`${BASE_URL}/login`);
+    await expect(page.locator('#login-form')).toBeVisible();
+
+    await page.fill('#login-form input[type="email"]', email);
+    await page.fill('#login-form input[type="password"]', password);
+    await page.click('#login-form button[type="submit"]');
+
+    await expect(page.getByText('Liste des projets')).toBeVisible();
+}
+
+async function createProject(page, projectName) {
+    await page.fill('input[placeholder="Ex: Refonte espace client"]', projectName);
+    await page.fill('input[placeholder="Objectif du projet"]', 'Validation du workflow complet');
+    await page.click('button:has-text("Ajouter")');
+
+    await expect(page.getByText('Focus projet')).toBeVisible();
+}
+
+async function createTask(page, taskTitle) {
+    await expect(page.locator('#task-form')).toBeVisible();
+
+    await page.locator('#task-form input').first().fill(taskTitle);
+    await page.locator('#task-form input').nth(1).fill('Realiser la premiere tache du projet');
+    await page.click('#task-form button[type="submit"]');
+
+    await expect(page.locator('article.task-item h3', { hasText: taskTitle })).toBeVisible();
+}
+
+async function completeTask(page, taskTitle) {
+    const taskItem = page.locator('article.task-item', {
+        has: page.locator('h3', { hasText: taskTitle }),
+    });
+
+    await taskItem.getByRole('button', { name: 'Terminer' }).click();
+    await expect(taskItem.locator('span.badge')).toContainText('terminé');
+}
+
+async function closeProject(page) {
+    await page.getByRole('button', { name: 'Cloturer le projet' }).click();
+}
+
+async function reopenProject(page) {
+    await page.getByRole('button', { name: 'Reouvrir le projet' }).click();
+}
+
 test.describe('Workflow Front E2E', () => {
     test('Inscription', async ({ page }) => {
         const seed = Date.now();
         const email = `e2e.${seed}@example.com`;
         const password = 'Passw0rd!';
 
-        await page.goto(BASE_URL);
-        await page.click('#landing-cta');
-        await expect(page.locator('#auth-card')).toBeVisible();
-
-        await page.click('button.auth-tab:has-text("Inscription")');
-        await page.fill('#register-form input[type="email"]', email);
-        await page.fill('#register-form input[type="password"]', password);
-        await page.check('#consentCheck');
-        await page.click('#register-form button[type="submit"]');
-        await expect(page.locator('#register-form .text-info')).toContainText(/Compte/i);
+        await registerUser(page, email, password);
     });
 
     test('Connexion', async ({ page }) => {
@@ -26,22 +79,8 @@ test.describe('Workflow Front E2E', () => {
         const email = `e2e.${seed}@example.com`;
         const password = 'Passw0rd!';
 
-        await page.goto(BASE_URL);
-        await page.click('#landing-cta');
-        await expect(page.locator('#auth-card')).toBeVisible();
-
-        await page.click('button.auth-tab:has-text("Inscription")');
-        await page.fill('#register-form input[type="email"]', email);
-        await page.fill('#register-form input[type="password"]', password);
-        await page.check('#consentCheck');
-        await page.click('#register-form button[type="submit"]');
-
-        await page.click('button.auth-tab:has-text("Connexion")');
-        await page.fill('#login-form input[type="email"]', email);
-        await page.fill('#login-form input[type="password"]', password);
-        await page.click('#login-form button[type="submit"]');
-        await expect(page.locator('#dashboard-shell')).toBeVisible();
-        await expect(page.locator('#project-form')).toBeVisible();
+        await registerUser(page, email, password);
+        await loginUser(page, email, password);
     });
 
     test('Creation projet', async ({ page }) => {
@@ -50,26 +89,9 @@ test.describe('Workflow Front E2E', () => {
         const password = 'Passw0rd!';
         const projectName = `Projet E2E ${seed}`;
 
-        await page.goto(BASE_URL);
-        await page.click('#landing-cta');
-        await expect(page.locator('#auth-card')).toBeVisible();
-
-        await page.click('button.auth-tab:has-text("Inscription")');
-        await page.fill('#register-form input[type="email"]', email);
-        await page.fill('#register-form input[type="password"]', password);
-        await page.check('#consentCheck');
-        await page.click('#register-form button[type="submit"]');
-
-        await page.click('button.auth-tab:has-text("Connexion")');
-        await page.fill('#login-form input[type="email"]', email);
-        await page.fill('#login-form input[type="password"]', password);
-        await page.click('#login-form button[type="submit"]');
-        await expect(page.locator('#dashboard-shell')).toBeVisible();
-
-        await page.fill('#project-form input[placeholder="Ex: Refonte portail client"]', projectName);
-        await page.fill('#project-form input[placeholder="Objectif du projet"]', 'Validation du workflow complet');
-        await page.click('#project-form button[type="submit"]');
-        await expect(page.locator('.alert-success')).toContainText(/Projet cr[eé]é? avec succ[eè]s\.?/i);
+        await registerUser(page, email, password);
+        await loginUser(page, email, password);
+        await createProject(page, projectName);
     });
 
     test('Creation tache', async ({ page }) => {
@@ -79,31 +101,10 @@ test.describe('Workflow Front E2E', () => {
         const projectName = `Projet E2E ${seed}`;
         const taskTitle = `Tache E2E ${seed}`;
 
-        await page.goto(BASE_URL);
-        await page.click('#landing-cta');
-        await expect(page.locator('#auth-card')).toBeVisible();
-
-        await page.click('button.auth-tab:has-text("Inscription")');
-        await page.fill('#register-form input[type="email"]', email);
-        await page.fill('#register-form input[type="password"]', password);
-        await page.check('#consentCheck');
-        await page.click('#register-form button[type="submit"]');
-
-        await page.click('button.auth-tab:has-text("Connexion")');
-        await page.fill('#login-form input[type="email"]', email);
-        await page.fill('#login-form input[type="password"]', password);
-        await page.click('#login-form button[type="submit"]');
-        await expect(page.locator('#dashboard-shell')).toBeVisible();
-
-        await page.fill('#project-form input[placeholder="Ex: Refonte portail client"]', projectName);
-        await page.fill('#project-form input[placeholder="Objectif du projet"]', 'Validation du workflow complet');
-        await page.click('#project-form button[type="submit"]');
-        await expect(page.locator('.alert-success')).toContainText(/Projet cr[eé]é? avec succ[eè]s\.?/i);
-
-        await page.fill('#task-form input[placeholder="Ex: Designer la page d\'accueil"]', taskTitle);
-        await page.fill('#task-form input[placeholder="Details de la tache"]', 'Realiser la premiere tache du projet');
-        await page.click('#task-form button[type="submit"]');
-        await expect(page.locator('#task-list .item strong', { hasText: taskTitle })).toBeVisible();
+        await registerUser(page, email, password);
+        await loginUser(page, email, password);
+        await createProject(page, projectName);
+        await createTask(page, taskTitle);
     });
 
     test('Completion tache', async ({ page }) => {
@@ -113,72 +114,156 @@ test.describe('Workflow Front E2E', () => {
         const projectName = `Projet E2E ${seed}`;
         const taskTitle = `Tache E2E ${seed}`;
 
-        await page.goto(BASE_URL);
-        await page.click('#landing-cta');
-        await expect(page.locator('#auth-card')).toBeVisible();
+        await registerUser(page, email, password);
+        await loginUser(page, email, password);
+        await createProject(page, projectName);
+        await createTask(page, taskTitle);
 
-        await page.click('button.auth-tab:has-text("Inscription")');
-        await page.fill('#register-form input[type="email"]', email);
-        await page.fill('#register-form input[type="password"]', password);
-        await page.check('#consentCheck');
-        await page.click('#register-form button[type="submit"]');
-
-        await page.click('button.auth-tab:has-text("Connexion")');
-        await page.fill('#login-form input[type="email"]', email);
-        await page.fill('#login-form input[type="password"]', password);
-        await page.click('#login-form button[type="submit"]');
-        await expect(page.locator('#dashboard-shell')).toBeVisible();
-
-        await page.fill('#project-form input[placeholder="Ex: Refonte portail client"]', projectName);
-        await page.fill('#project-form input[placeholder="Objectif du projet"]', 'Validation du workflow complet');
-        await page.click('#project-form button[type="submit"]');
-        await expect(page.locator('.alert-success')).toContainText(/Projet cr[eé]é? avec succ[eè]s\.?/i);
-
-        await page.fill('#task-form input[placeholder="Ex: Designer la page d\'accueil"]', taskTitle);
-        await page.fill('#task-form input[placeholder="Details de la tache"]', 'Realiser la premiere tache du projet');
-        await page.click('#task-form button[type="submit"]');
-        await expect(page.locator('#task-list .item strong', { hasText: taskTitle })).toBeVisible();
-
-        await page.click(`#task-list .item:has(strong:has-text("${taskTitle}")) button`);
-        await expect(page.locator('#task-list .item .text-muted', { hasText: 'Statut: terminé' })).toBeVisible();
+        await completeTask(page, taskTitle);
     });
 
-    test('Suppr un projet (cloture projet)', async ({ page }) => {
+    test('Cloture projet', async ({ page }) => {
         const seed = Date.now();
         const email = `e2e.${seed}@example.com`;
         const password = 'Passw0rd!';
         const projectName = `Projet E2E ${seed}`;
         const taskTitle = `Tache E2E ${seed}`;
 
-        await page.goto(BASE_URL);
-        await page.click('#landing-cta');
-        await expect(page.locator('#auth-card')).toBeVisible();
+        await registerUser(page, email, password);
+        await loginUser(page, email, password);
+        await createProject(page, projectName);
+        await createTask(page, taskTitle);
 
-        await page.click('button.auth-tab:has-text("Inscription")');
-        await page.fill('#register-form input[type="email"]', email);
-        await page.fill('#register-form input[type="password"]', password);
-        await page.check('#consentCheck');
-        await page.click('#register-form button[type="submit"]');
+        await completeTask(page, taskTitle);
+        await closeProject(page);
+        await expect(page.locator('.alert-success')).toContainText('Le projet a bien été cloturé.');
+        await expect(page.locator('span.badge.fs-6')).toContainText('cloturé');
+    });
 
-        await page.click('button.auth-tab:has-text("Connexion")');
-        await page.fill('#login-form input[type="email"]', email);
-        await page.fill('#login-form input[type="password"]', password);
-        await page.click('#login-form button[type="submit"]');
-        await expect(page.locator('#dashboard-shell')).toBeVisible();
+    test('Refus cloture projet si tache non terminee', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+        const projectName = `Projet E2E ${seed}`;
+        const taskTitle = `Tache E2E ${seed}`;
 
-        await page.fill('#project-form input[placeholder="Ex: Refonte portail client"]', projectName);
-        await page.fill('#project-form input[placeholder="Objectif du projet"]', 'Validation du workflow complet');
-        await page.click('#project-form button[type="submit"]');
-        await expect(page.locator('.alert-success')).toContainText(/Projet cr[eé]é? avec succ[eè]s\.?/i);
+        await registerUser(page, email, password);
+        await loginUser(page, email, password);
+        await createProject(page, projectName);
+        await createTask(page, taskTitle);
 
-        await page.fill('#task-form input[placeholder="Ex: Designer la page d\'accueil"]', taskTitle);
-        await page.fill('#task-form input[placeholder="Details de la tache"]', 'Realiser la premiere tache du projet');
-        await page.click('#task-form button[type="submit"]');
-        await expect(page.locator('#task-list .item strong', { hasText: taskTitle })).toBeVisible();
+        await closeProject(page);
 
-        await page.click(`#task-list .item:has(strong:has-text("${taskTitle}")) button`);
-        await page.click('#close-project button');
-        await expect(page.locator('.alert-success')).toContainText(/Projet cl[oô]tur[eé]/i);
+        await expect(page.locator('.alert-danger')).toContainText('Toutes les tâches doivent être terminées pour clôturer le projet');
+        await expect(page.locator('span.badge.fs-6')).toContainText('ouvert');
+    });
+
+    test('Impossible d ajouter une tache si projet cloture', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+        const projectName = `Projet E2E ${seed}`;
+        const taskTitle = `Tache E2E ${seed}`;
+
+        await registerUser(page, email, password);
+        await loginUser(page, email, password);
+        await createProject(page, projectName);
+        await createTask(page, taskTitle);
+
+        await completeTask(page, taskTitle);
+        await closeProject(page);
+
+        await expect(page.locator('.alert-warning')).toContainText('Ce projet est clôturé: vous ne pouvez plus ajouter de nouvelles taches.');
+        await expect(page.locator('#task-form input').first()).toBeDisabled();
+        await expect(page.locator('#task-form input').nth(1)).toBeDisabled();
+        await expect(page.locator('#task-form select')).toBeDisabled();
+        await expect(page.locator('#task-form button[type="submit"]')).toBeDisabled();
+
+        await expect(page.locator('article.task-item')).toHaveCount(1);
+    });
+
+    test('Reouvrir projet', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+        const projectName = `Projet E2E ${seed}`;
+        const taskTitle = `Tache E2E ${seed}`;
+
+        await registerUser(page, email, password);
+        await loginUser(page, email, password);
+        await createProject(page, projectName);
+        await createTask(page, taskTitle);
+
+        await completeTask(page, taskTitle);
+        await closeProject(page);
+        await expect(page.locator('span.badge.fs-6')).toContainText('cloturé');
+
+        await reopenProject(page);
+
+        await expect(page.locator('.alert-success')).toContainText('Le projet a bien été ouvert.');
+        await expect(page.locator('span.badge.fs-6')).toContainText('ouvert');
+        await expect(page.locator('#task-form button[type="submit"]')).toBeEnabled();
+    });
+
+    test('Suppression tache', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+        const projectName = `Projet E2E ${seed}`;
+        const taskTitle = `Tache E2E ${seed}`;
+
+        await registerUser(page, email, password);
+        await loginUser(page, email, password);
+        await createProject(page, projectName);
+        await createTask(page, taskTitle);
+
+        await expect(page.locator('article.task-item')).toHaveCount(1);
+
+        const taskItem = page.locator('article.task-item', {
+            has: page.locator('h3', { hasText: taskTitle }),
+        });
+        await taskItem.locator('button:has-text("Supprimer")').click();
+
+        await expect(page.locator('article.task-item')).toHaveCount(0);
+        await expect(page.locator('.alert-success')).toContainText('Tache supprimee.');
+    });
+
+    test('Suppression projet', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+        const projectName = `Projet E2E ${seed}`;
+
+        await registerUser(page, email, password);
+        await loginUser(page, email, password);
+        await createProject(page, projectName);
+
+        await page.getByRole('button', { name: 'Retour a la liste' }).click();
+        await expect(page.getByText('Liste des projets')).toBeVisible();
+        
+        // Chercher la ligne contenant le projet avec le nom exact et cliquer sur le premier bouton Supprimer
+        const projectRow = page.locator('tr').filter({
+            hasText: projectName,
+        });
+        
+        await projectRow.locator('button:has-text("Supprimer")').first().click();
+
+        await expect(page.locator('.alert-success')).toContainText('Votre projet a bien été supprimé.');
+    });
+
+    test('Suppression utilisateur', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+
+        await registerUser(page, email, password);
+        await loginUser(page, email, password);
+        await expect(page.getByText('Liste des projets')).toBeVisible();
+
+        await page.getByRole('button', { name: 'Supprimer mon compte' }).click();
+
+        await expect(page.locator('#login-form')).toBeVisible();
+        await expect(page.locator('.alert-success')).toContainText('Votre compte a bien été supprimé.');
     });
 
     test('Check log notification-service', async () => {
@@ -187,5 +272,7 @@ test.describe('Workflow Front E2E', () => {
         });
 
         expect(logs).toContain('Notification service listening on port 3004');
-    });
+        
+        expect(logs).toMatch(/EVENT → Tâche terminée :/);
+        });
 });

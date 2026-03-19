@@ -47,7 +47,7 @@ router.delete('/profile', (req, res) => {
         const success = deleteUser(decoded.id);
         if (!success)
             return res.status(404).json({ error: 'Utilisateur non trouvé' });
-        res.json({ message: 'Compte supprimé (droit à l’oubli)' });
+        res.json({ message: 'Votre compte a bien été supprimé.' });
     } catch {
         res.status(401).json({ error: 'Token invalide' });
     }

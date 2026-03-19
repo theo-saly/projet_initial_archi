@@ -16,7 +16,7 @@ export default async (req, res) => {
 
     const newStatus = req.body.status || project.status;
 
-    if (newStatus === 'terminé' && project.status !== 'terminé') {
+    if (newStatus === 'cloturé' && project.status !== 'cloturé') {
         try {
             const response = await fetch(
                 `${TASK_SERVICE_URL}/tasks/by-project?projectId=${req.params.id}`,
@@ -50,7 +50,7 @@ export default async (req, res) => {
         updatedAt: new Date(),
     });
 
-    if (newStatus === 'terminé' && project.status !== 'terminé') {
+    if (newStatus === 'cloturé' && project.status !== 'cloturé') {
         await publishEvent('ProjectCompleted', {
             projectId: req.params.id,
             projectName: project.name,

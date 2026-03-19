@@ -112,6 +112,9 @@ pnpm test ou npm test
 # Tests d'un service spécifique
 cd services/task-service && npx jest --verbose
 cd services/project-service && npx jest --verbose
+
+# Tests e2e
+npx playwright test
 ```
 
 ### Couverture des tests (9 tests)

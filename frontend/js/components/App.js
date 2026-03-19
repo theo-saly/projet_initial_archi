@@ -1,9 +1,15 @@
 function App() {
-    const [token, setToken] = React.useState(() => localStorage.getItem('authToken') || '');
-    const [path, setPath] = React.useState(() => normalizePath(window.location.pathname));
-    const [message, setMessage] = React.useState('');
+    // JWT
+    const [token, setToken] = React.useState(
+        () => localStorage.getItem('authToken') || ''
+    );
+    const [path, setPath] = React.useState(
+        () => normalizePath(window.location.pathname)
+    );
+    const [message, setMessage] = React.useState({ type: '', text: '' });
+    const [busy, setBusy] = React.useState(false);
 
-    // Nav
+    // nav
     const navigate = (newPath) => {
         const normalized = normalizePath(newPath);
         if (normalized === path) return;
@@ -11,14 +17,16 @@ function App() {
         setPath(normalized);
     };
 
-    //changements d'URL
-    React.useEffect(() => {
-        window.addEventListener('popstate', () => {
-            setPath(normalizePath(window.location.pathname));
-        });
-    }, []);
+    // routes
+    const projectIdFromPath = matchProjectPath(path);
+    const isLoginPath = path === '/login';
+    const isRegisterPath = path === '/register';
+    const isAuthPath = isLoginPath || isRegisterPath;
+    const isProjectListPath = path === '/projects';
+    const isProjectFocusPath = !!projectIdFromPath;
 
-    //localStorage
+    // EFFETS
+    // token localStorage
     React.useEffect(() => {
         if (token) {
             localStorage.setItem('authToken', token);
@@ -27,57 +35,232 @@ function App() {
         }
     }, [token]);
 
-    // Redirection
+    // Écouter les changements de l'historique du navigateur
     React.useEffect(() => {
-        if (!token && path === '/dashboard') navigate('/login');
-        if (token && (path === '/login' || path === '/sign')) navigate('/dashboard');
-        if (!['/', '/login', '/sign', '/dashboard'].includes(path)) navigate('/');
+        const onPopState = () => {
+            setPath(normalizePath(window.location.pathname));
+        };
+        window.addEventListener('popstate', onPopState);
+        return () => window.removeEventListener('popstate', onPopState);
+    }, []);
+
+    // accès et redirection
+    React.useEffect(() => {
+        // Si pas co mais sur une page protégée -> vers login
+        if (!token && (isProjectListPath || isProjectFocusPath)) {
+            navigate('/login');
+            return;
+        }
+
+        // Si connecté mais sur une page d'auth -> vers projets
+        if (token && isAuthPath) {
+            navigate('/projects');
+            return;
+        }
+
+        // si co -> vers projets
+        if (path === '/') {
+            navigate(token ? '/projects' : '/login');
+            return;
+        }
+
+        // default
+        if (!isAuthPath && !isProjectListPath && !isProjectFocusPath && path !== '/') {
+            navigate(token ? '/projects' : '/login');
+        }
     }, [token, path]);
 
-    // Déco
-    const logout = () => {
-        setToken('');
-        setMessage('Vous etes deconnecte.');
-        navigate('/');
+    // regle scroll pages auth
+    React.useEffect(() => {
+        if (isAuthPath) {
+            document.body.classList.add('auth-no-scroll');
+        } else {
+            document.body.classList.remove('auth-no-scroll');
+        }
+        return () => document.body.classList.remove('auth-no-scroll');
+    }, [isAuthPath]);
+
+    // gestion messages
+    const pushMessage = (type, text) => {
+        setMessage({ type, text });
     };
 
-    // Supprde compte
-    const deleteAccount = async () => {
-        setMessage('');
+    const clearMessage = () => {
+        setMessage({ type: '', text: '' });
+    };
+
+    // auth
+    const login = async (credentials) => {
+        setBusy(true);
+        clearMessage();
         try {
-            const res = await fetch('/auth/profile', {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: buildHeaders('', true),
+                body: JSON.stringify(credentials),
             });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.error || 'Erreur suppression compte');
+
+            const payload = await parseApiResponse(response);
+            if (!payload.token) {
+                throw new Error('Token JWT manquant dans la reponse');
             }
-            setToken('');
-            setMessage(data.message || 'Compte supprime.');
-            navigate('/');
+
+            setToken(payload.token);
+            pushMessage('success', 'Connexion reussie.');
+            navigate('/projects');
         } catch (err) {
-            setMessage(err.message);
+            pushMessage('danger', err.message);
+            throw err;
+        } finally {
+            setBusy(false);
         }
     };
 
-    //chemin
-    const authTab = path === '/sign' ? 'register' : 'login';
+    const register = async (payload) => {
+        setBusy(true);
+        clearMessage();
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: buildHeaders('', true),
+                body: JSON.stringify(payload),
+            });
 
-    if (path === '/') {
-        return <HomePage navigate={navigate} message={message} />;
-    }
+            await parseApiResponse(response);
+            pushMessage('success', 'Compte créé. Vous pouvez maintenant vous connecter.');
+            navigate('/login');
+        } catch (err) {
+            pushMessage('danger', err.message);
+            throw err;
+        } finally {
+            setBusy(false);
+        }
+    };
 
-    if (path === '/login' || path === '/sign') {
-        return <AuthPage authTab={authTab} setToken={setToken} navigate={navigate} />;
-    }
+    const logout = () => {
+        setToken('');
+        pushMessage('success', 'Vous avez été déconnecté.');
+        navigate('/login');
+    };
+
+    const deleteAccount = async () => {
+        setBusy(true);
+        clearMessage();
+        try {
+            const res = await fetch('/api/auth/profile', {
+                method: 'DELETE',
+                headers: buildHeaders(token, false),
+            });
+
+            const data = await parseApiResponse(res);
+            setToken('');
+            pushMessage('success', data.message || 'Votre compte à bien été supprimé.');
+            navigate('/login');
+        } catch (err) {
+            pushMessage('danger', err.message);
+        } finally {
+            setBusy(false);
+        }
+    };
 
     return (
-        <DashboardPage
-            token={token}
-            message={message}
-            logout={logout}
-            deleteAccount={deleteAccount}
-        />
+        <div className="app-shell min-vh-100">
+            {!isAuthPath && (
+                <header className="topbar container-fluid py-3 px-3 px-md-4">
+                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                        <div>
+                            <div className="brand-mark">Kanban Project Manager</div>
+                            <small className="text-muted">
+                                Frontend Bootstrap - Auth, Projets et Taches
+                            </small>
+                        </div>
+
+                        {token && (
+                            <div className="d-flex gap-2 flex-wrap">
+                                <button
+                                    type="button"
+                                    className="btn btn-outline-secondary"
+                                    onClick={() => navigate('/projects')}
+                                >
+                                    Projets
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-outline-danger"
+                                    onClick={deleteAccount}
+                                    disabled={busy}
+                                >
+                                    Supprimer mon compte
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-dark"
+                                    onClick={logout}
+                                    disabled={busy}
+                                >
+                                    Deconnexion
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </header>
+            )}
+
+            <main className={isAuthPath ? 'auth-main' : 'container pb-5'}>
+                {isLoginPath && (
+                    <LoginPage
+                        busy={busy}
+                        message={message}
+                        onLogin={login}
+                        goToRegister={() => {
+                            clearMessage();
+                            navigate('/register');
+                        }}
+                    />
+                )}
+
+                {isRegisterPath && (
+                    <RegisterPage
+                        busy={busy}
+                        message={message}
+                        onRegister={register}
+                        goToLogin={() => {
+                            clearMessage();
+                            navigate('/login');
+                        }}
+                    />
+                )}
+
+                {!isAuthPath && message.text && (
+                    <div
+                        className={`alert alert-${message.type === 'danger' ? 'danger' : 'success'} mb-4 mt-3`}
+                        role="alert"
+                    >
+                        {message.text}
+                    </div>
+                )}
+
+                {token && isProjectListPath && (
+                    <DashboardPage
+                        token={token}
+                        navigate={navigate}
+                        busy={busy}
+                        setBusy={setBusy}
+                        pushMessage={pushMessage}
+                    />
+                )}
+
+                {token && isProjectFocusPath && (
+                    <ProjectPage
+                        token={token}
+                        projectId={projectIdFromPath}
+                        navigate={navigate}
+                        busy={busy}
+                        setBusy={setBusy}
+                        pushMessage={pushMessage}
+                    />
+                )}
+            </main>
+        </div>
     );
 }
