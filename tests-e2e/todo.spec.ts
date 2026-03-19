@@ -57,14 +57,6 @@ async function completeTask(page, taskTitle) {
     await expect(taskItem.locator('span.badge')).toContainText('terminé');
 }
 
-async function closeProject(page) {
-    await page.getByRole('button', { name: 'Cloturer le projet' }).click();
-}
-
-async function reopenProject(page) {
-    await page.getByRole('button', { name: 'Reouvrir le projet' }).click();
-}
-
 test.describe('Workflow Front E2E', () => {
     test('Inscription', async ({ page }) => {
         const seed = Date.now();
@@ -135,7 +127,7 @@ test.describe('Workflow Front E2E', () => {
         await createTask(page, taskTitle);
 
         await completeTask(page, taskTitle);
-        await closeProject(page);
+        await page.getByRole('button', { name: 'Cloturer le projet' }).click();
         await expect(page.locator('.alert-success')).toContainText('Le projet a bien été cloturé.');
         await expect(page.locator('span.badge.fs-6')).toContainText('cloturé');
     });
@@ -152,7 +144,7 @@ test.describe('Workflow Front E2E', () => {
         await createProject(page, projectName);
         await createTask(page, taskTitle);
 
-        await closeProject(page);
+        await page.getByRole('button', { name: 'Cloturer le projet' }).click();
 
         await expect(page.locator('.alert-danger')).toContainText('Toutes les tâches doivent être terminées pour clôturer le projet');
         await expect(page.locator('span.badge.fs-6')).toContainText('ouvert');
@@ -171,7 +163,7 @@ test.describe('Workflow Front E2E', () => {
         await createTask(page, taskTitle);
 
         await completeTask(page, taskTitle);
-        await closeProject(page);
+        await page.getByRole('button', { name: 'Cloturer le projet' }).click();
 
         await expect(page.locator('.alert-warning')).toContainText('Ce projet est clôturé: vous ne pouvez plus ajouter de nouvelles taches.');
         await expect(page.locator('#task-form input').first()).toBeDisabled();
@@ -195,10 +187,10 @@ test.describe('Workflow Front E2E', () => {
         await createTask(page, taskTitle);
 
         await completeTask(page, taskTitle);
-        await closeProject(page);
+        await page.getByRole('button', { name: 'Cloturer le projet' }).click();
         await expect(page.locator('span.badge.fs-6')).toContainText('cloturé');
 
-        await reopenProject(page);
+        await page.getByRole('button', { name: 'Reouvrir le projet' }).click();
 
         await expect(page.locator('.alert-success')).toContainText('Le projet a bien été ouvert.');
         await expect(page.locator('span.badge.fs-6')).toContainText('ouvert');
@@ -241,7 +233,6 @@ test.describe('Workflow Front E2E', () => {
         await page.getByRole('button', { name: 'Retour a la liste' }).click();
         await expect(page.getByText('Liste des projets')).toBeVisible();
         
-        // Chercher la ligne contenant le projet avec le nom exact et cliquer sur le premier bouton Supprimer
         const projectRow = page.locator('tr').filter({
             hasText: projectName,
         });
@@ -274,5 +265,5 @@ test.describe('Workflow Front E2E', () => {
         expect(logs).toContain('Notification service listening on port 3004');
         
         expect(logs).toMatch(/EVENT → Tâche terminée :/);
-        });
+    });
 });

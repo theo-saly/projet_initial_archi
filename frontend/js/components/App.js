@@ -171,7 +171,7 @@ function App() {
                         <div>
                             <div className="brand-mark">Kanban Project Manager</div>
                             <small className="text-muted">
-                                Frontend Bootstrap - Auth, Projets et Taches
+                                Par Saly Théo & Inacio Rodrigues
                             </small>
                         </div>
 
