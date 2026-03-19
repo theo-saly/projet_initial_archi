@@ -99,6 +99,36 @@ test.describe('Workflow Front E2E', () => {
         await createProject(page, projectName);
     });
 
+    test('Modification projet nom et desc', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+        const projectName = `Projet E2E ${seed}`;
+        const nextProjectName = `Projet E2E Modifie ${seed}`;
+        const nextProjectDescription = `Description modifiee ${seed}`;
+
+        await registerUser(page, email, password);
+        await loginUser(page, email, password);
+        await createProject(page, projectName);
+
+        const projectForm = page.locator(
+            'section.card form.row.g-3.align-items-end',
+        );
+        await projectForm.locator('input').first().fill(nextProjectName);
+        await projectForm.locator('input').nth(1).fill(nextProjectDescription);
+        await projectForm.locator('button[type="submit"]').click();
+
+        await expect(page.locator('.alert-success')).toContainText(
+            'Le projet a bien été mis à jour.',
+        );
+        await expect(projectForm.locator('input').first()).toHaveValue(
+            nextProjectName,
+        );
+        await expect(projectForm.locator('input').nth(1)).toHaveValue(
+            nextProjectDescription,
+        );
+    });
+
     test('Creation tache', async ({ page }) => {
         const seed = Date.now();
         const email = `e2e.${seed}@example.com`;
@@ -110,6 +140,50 @@ test.describe('Workflow Front E2E', () => {
         await loginUser(page, email, password);
         await createProject(page, projectName);
         await createTask(page, taskTitle);
+    });
+
+    test('Modification tache nom et desc', async ({ page }) => {
+        const seed = Date.now();
+        const email = `e2e.${seed}@example.com`;
+        const password = 'Passw0rd!';
+        const projectName = `Projet E2E ${seed}`;
+        const taskTitle = `Tache E2E ${seed}`;
+        const nextTaskTitle = `Tache E2E Modifiee ${seed}`;
+        const nextTaskDescription = `Description tache modifiee ${seed}`;
+
+        await registerUser(page, email, password);
+        await loginUser(page, email, password);
+        await createProject(page, projectName);
+        await createTask(page, taskTitle);
+
+        const taskItem = page.locator('article.task-item', {
+            has: page.locator('h3', { hasText: taskTitle }),
+        });
+        await taskItem.getByRole('button', { name: 'Modifier' }).click();
+
+        const editingTaskItem = page.locator('article.task-item', {
+            has: page.getByRole('button', { name: 'Annuler' }),
+        });
+        await editingTaskItem.locator('input').first().fill(nextTaskTitle);
+        await editingTaskItem
+            .locator('input')
+            .nth(1)
+            .fill(nextTaskDescription);
+        await editingTaskItem
+            .getByRole('button', { name: 'Enregistrer' })
+            .click();
+
+        await expect(page.locator('.alert-success')).toContainText(
+            'Tache mise a jour.',
+        );
+        await expect(
+            page.locator('article.task-item h3', { hasText: nextTaskTitle }),
+        ).toBeVisible();
+        await expect(
+            page.locator('article.task-item p', {
+                hasText: nextTaskDescription,
+            }),
+        ).toBeVisible();
     });
 
     test('Completion tache', async ({ page }) => {
