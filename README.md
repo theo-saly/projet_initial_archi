@@ -193,7 +193,7 @@ Puis lancer avec le profil `mysql`, en modifiant la variable d'environnement pui
 docker compose --profile mysql up --build
 ```
 
-> Les conteneurs `mysql-tasks` (port 3308) et `mysql-projects` (port 3309) démarrent uniquement avec ce profil.
+Les conteneurs `mysql-tasks` (port 3308) et `mysql-projects` (port 3309) démarrent uniquement avec ce profil.
 
 ### Accès à l'application
 
@@ -374,29 +374,27 @@ npx playwright test
 |-----------|--------|
 | `testDir` | `./tests-e2e` |
 | `baseURL` | `http://localhost:3000` |
-| `timeout` | 10 000 ms |
-| `headless` | `true` |
-| `screenshot` | Sur échec uniquement |
-| `video` | Conservé sur échec |
-| `retries` | 0 |
 
-#### Détail des tests E2E (13 tests)
+
+#### Détail des tests E2E (15 tests)
 
 | # | Test | Scénario |
 |---|------|----------|
 | 1 | Inscription | Créer un compte avec email, mot de passe et consentement RGPD |
 | 2 | Connexion | S'inscrire puis se connecter — redirection vers le dashboard |
 | 3 | Création projet | Créer un nouveau projet depuis le dashboard |
-| 4 | Création tâche | Ajouter une tâche à un projet |
-| 5 | Complétion tâche | Marquer une tâche comme terminée (bouton "Terminer") |
-| 6 | Clôture projet | Clôturer un projet dont toutes les tâches sont terminées |
-| 7 | Refus clôture | Tentative de clôture avec tâches non terminées → message d'erreur |
-| 8 | Blocage ajout tâche | Impossible d'ajouter une tâche sur un projet clôturé (champs désactivés) |
-| 9 | Réouverture projet | Réouvrir un projet clôturé → le formulaire de tâche redevient actif |
-| 10 | Suppression tâche | Supprimer une tâche et vérifier qu'elle disparaît |
-| 11 | Suppression projet | Supprimer un projet depuis la liste |
-| 12 | Suppression utilisateur | Supprimer son compte (droit à l'oubli) → retour au login |
-| 13 | Vérification logs notification-service | Vérifie que le notification-service a bien reçu les événements (`EVENT → Tâche terminée :`) |
+| 4 | Modification projet | Modifier le nom et la description d'un projet existant |
+| 5 | Création tâche | Ajouter une tâche à un projet |
+| 6 | Modification tâche | Modifier le nom et la description d'une tâche |
+| 7 | Complétion tâche | Marquer une tâche comme terminée (bouton "Terminer") |
+| 8 | Clôture projet | Clôturer un projet dont toutes les tâches sont terminées |
+| 9 | Refus clôture | Tentative de clôture avec tâches non terminées → message d'erreur |
+| 10 | Blocage ajout tâche | Impossible d'ajouter une tâche sur un projet clôturé (champs désactivés) |
+| 11 | Réouverture projet | Réouvrir un projet clôturé → le formulaire de tâche redevient actif |
+| 12 | Suppression tâche | Supprimer une tâche et vérifier qu'elle disparaît |
+| 13 | Suppression projet | Supprimer un projet depuis la liste |
+| 14 | Suppression utilisateur | Supprimer son compte (droit à l'oubli) → retour au login |
+| 15 | Vérification logs notification-service | Vérifie que le notification-service a bien reçu les événements (`EVENT → Tâche terminée :`) |
 
 ---
 
