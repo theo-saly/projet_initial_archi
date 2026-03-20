@@ -3,3 +3,4 @@ coverage
 test-results
 dist
 .DS_Store
+.env

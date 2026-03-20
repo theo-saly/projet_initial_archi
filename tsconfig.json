@@ -4,7 +4,7 @@
         "module": "commonjs",
         "lib": ["ES2020"],
         "outDir": "./dist",
-        "rootDir": "./src",
+        "rootDir": ".",
         "strict": false,
         "allowJs": true,
         "esModuleInterop": true,
@@ -16,6 +16,6 @@
         "sourceMap": true,
         "moduleDetection": "force"
     },
-    "include": ["src/**/*"],
-    "exclude": ["node_modules", "dist", "spec", "tests-e2e", "coverage", "src/static"]
+    "include": ["services/**/*", "spec/**/*"],
+    "exclude": ["node_modules", "dist", "tests-e2e", "coverage", "frontend"],
 }

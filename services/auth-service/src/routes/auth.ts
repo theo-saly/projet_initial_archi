@@ -1,0 +1,85 @@
+import { Router } from 'express';
+import {
+    createUser,
+    authenticateUser,
+    deleteUser,
+    getUserById,
+} from '../persistence/user';
+import jwt from 'jsonwebtoken';
+
+interface TokenPayload {
+    id: number;
+    email: string;
+}
+
+const router = Router();
+
+router.post('/register', (req, res) => {
+    const { email, password, consent } = req.body;
+    if (!email || !password || consent === undefined) {
+        return res.status(400).json({ error: 'Champs manquants' });
+    }
+    const consentBool =
+        consent === true ||
+        consent === 'true' ||
+        consent === 1 ||
+        consent === '1';
+    const user = createUser(email, password, consentBool);
+    if (!user) {
+        return res
+            .status(409)
+            .json({ error: 'Un compte avec cet email existe déjà' });
+    }
+    res.status(201).json({
+        id: user.id,
+        email: user.email,
+        consent: user.consent,
+    });
+});
+
+router.post('/login', (req, res) => {
+    const { email, password } = req.body;
+    const token = authenticateUser(email, password);
+    if (!token) {
+        return res
+            .status(401)
+            .json({ error: 'Identifiants invalides ou consentement manquant' });
+    }
+    res.json({ token });
+});
+
+router.delete('/profile', (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'Token manquant' });
+    const token = authHeader.split(' ')[1];
+    try {
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET || 'SECRET_KEY',
+        ) as TokenPayload;
+        const success = deleteUser(decoded.id);
+        if (!success)
+            return res.status(404).json({ error: 'Utilisateur non trouvé' });
+        res.json({ message: 'Votre compte a bien été supprimé.' });
+    } catch {
+        res.status(401).json({ error: 'Token invalide' });
+    }
+});
+
+router.get('/users/:id', (req, res) => {
+    const userId = Number(req.params.id);
+    if (!Number.isFinite(userId)) {
+        return res
+            .status(400)
+            .json({ error: 'Identifiant utilisateur invalide' });
+    }
+
+    const user = getUserById(userId);
+    if (!user) {
+        return res.status(404).json({ error: 'Utilisateur non trouve' });
+    }
+
+    return res.json(user);
+});
+
+export default router;
