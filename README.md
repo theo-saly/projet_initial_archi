@@ -173,7 +173,30 @@ Le **notification-service** consomme ces streams en continu et écrit les évén
 - [Node.js](https://nodejs.org/) ≥ 18 (pour les tests en local)
 - [pnpm](https://pnpm.io/) ou npm
 
-### Démarrage (SQLite — défaut)
+### Installation
+
+1. **Cloner le dépôt**
+
+```bash
+git clone https://github.com/theo-saly/projet_initial_archi.git
+cd projet_initial_archi
+```
+
+2. **Créer le fichier `.env`**
+
+```bash
+cp .env.example .env
+```
+
+Adapter les valeurs si nécessaire (credentials SMTP, secret JWT, etc.).
+
+3. **Installer les dépendances (pour les tests et le linting en local)**
+
+```bash
+npm install
+```
+
+### Démarrage
 
 ```bash
 docker compose up --build
@@ -181,13 +204,7 @@ docker compose up --build
 
 ### Démarrage avec MySQL
 
-Créer un fichier `.env` à la racine en copiant le fichier `.env.example` :
-
-```env
-DB_TYPE=sqlite
-```
-
-Puis lancer avec le profil `mysql`, en modifiant la variable d'environnement puis faire :
+Lancer avec le profil `mysql`, en modifiant la variable d'environnement puis faire :
 
 ```bash
 docker compose --profile mysql up --build
@@ -219,25 +236,18 @@ docker compose down -v
 |----------|-----------|-------------|-------------------|
 | `DB_TYPE` | project, task | Mode de persistance : `sqlite` ou `mysql` | `sqlite` |
 | `JWT_SECRET` | auth, project, task | Clé secrète JWT | `SECRET_KEY` |
-| `SQLITE_DB_LOCATION` | project, task | Chemin du fichier SQLite | `/app/data/*.db` |
-| `MYSQL_HOST` | project, task | Hôte MySQL | `mysql-projects` / `mysql-tasks` |
+
+| `MYSQL_ROOT_PASSWORD` | project, task | Hôte MySQL | `mysql-projects` / `mysql-tasks` |
 | `MYSQL_USER` | project, task | Utilisateur MySQL | `root` |
 | `MYSQL_PASSWORD` | project, task | Mot de passe MySQL | `root` |
-| `MYSQL_DB` | project, task | Nom de la base MySQL | `projects` / `tasks` |
-| `REDIS_HOST` | project, task, notification | Hôte Redis | `redis` |
-| `TASK_SERVICE_URL` | project | URL interne du task-service | `http://task-service:3003` |
-| `LOG_FILE` | notification | Chemin du fichier de log | `/app/logs/notifications.log` |
+
 | `SMTP_HOST` | notification | Hôte SMTP | — |
 | `SMTP_PORT` | notification | Port SMTP | `465` |
 | `SMTP_SECURE` | notification | TLS SMTP activé | `true` |
 | `SMTP_USER` | notification | Utilisateur SMTP | — |
 | `SMTP_PASS` | notification | Mot de passe SMTP | — |
 | `SMTP_FROM` | notification | Adresse expéditeur | `SMTP_USER` |
-| `SMTP_RECIPIENT` | notification | Adresse destinataire par défaut | `SMTP_USER` |
-| `AUTH_SERVICE_URL` | notification | URL auth-service (resolution email utilisateur) | `http://auth-service:3001` |
-| `PROJECT_SERVICE_URL` | notification | URL project-service (resolution owner du projet) | `http://project-service:3002` |
-
-| `NODE_ENV` | project, task | `test` → utilise la persistence in-memory | — |
+| `SMTP_RECIPIENT` | notification | Adresse destinataire par défaut |
 
 ---
 
@@ -269,10 +279,16 @@ pnpm test
 
 ```bash
 # project-service uniquement
-cd services/project-service; npx jest --verbose
+  cd services/project-service; npx jest --verbose; cd ../../
 
 # task-service uniquement
-cd services/task-service; npx jest --verbose
+cd services/task-service; npx jest --verbose; cd ../../
+
+# notification-service uniquement
+cd services/notification-service; npx jest --verbose; cd ../../
+
+# auth-service uniquement
+cd services/auth-service; npx jest --verbose; cd ../../
 ```
 
 #### Détail des tests unitaires (27 tests / 12 suites)
