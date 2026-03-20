@@ -440,6 +440,11 @@ docker compose logs notification-service
 
 ---
 
+## ADR
+
+Nos ADR se trouve sur le trello
+---
+
 ## Trello
 
 [https://trello.com/b/uRypyONb/projetinitialarchi](https://trello.com/b/uRypyONb/projetinitialarchi)
