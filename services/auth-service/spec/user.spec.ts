@@ -1,4 +1,8 @@
-import { createUser, authenticateUser, deleteUser } from '../src/persistence/user';
+import {
+    createUser,
+    authenticateUser,
+    deleteUser,
+} from '../src/persistence/user';
 import jwt from 'jsonwebtoken';
 
 beforeEach(() => {
@@ -24,7 +28,10 @@ test('login avec identifiants valides retourne un JWT', () => {
     const token = authenticateUser('login@test.com', 'mypassword');
     expect(token).not.toBeNull();
 
-    const decoded = jwt.verify(token!, process.env.JWT_SECRET || 'SECRET_KEY') as { email: string };
+    const decoded = jwt.verify(
+        token!,
+        process.env.JWT_SECRET || 'SECRET_KEY',
+    ) as { email: string };
     expect(decoded.email).toBe('login@test.com');
 });
 

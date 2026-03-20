@@ -126,7 +126,10 @@ function TodoListCard({
         const nextDescription = editTaskForm.description.trim();
 
         if (!nextTitle || !nextDescription) {
-            pushMessage('danger', 'Nom et description de la tache sont requis.');
+            pushMessage(
+                'danger',
+                'Nom et description de la tache sont requis.',
+            );
             return;
         }
 
@@ -264,11 +267,14 @@ function TodoListCard({
                                                     </label>
                                                     <input
                                                         className="form-control form-control-sm"
-                                                        value={editTaskForm.title}
+                                                        value={
+                                                            editTaskForm.title
+                                                        }
                                                         onChange={(e) =>
                                                             setEditTaskForm({
                                                                 ...editTaskForm,
-                                                                title: e.target.value,
+                                                                title: e.target
+                                                                    .value,
                                                             })
                                                         }
                                                         disabled={busy}
@@ -281,12 +287,15 @@ function TodoListCard({
                                                     </label>
                                                     <input
                                                         className="form-control form-control-sm"
-                                                        value={editTaskForm.description}
+                                                        value={
+                                                            editTaskForm.description
+                                                        }
                                                         onChange={(e) =>
                                                             setEditTaskForm({
                                                                 ...editTaskForm,
                                                                 description:
-                                                                    e.target.value,
+                                                                    e.target
+                                                                        .value,
                                                             })
                                                         }
                                                         disabled={busy}
@@ -337,8 +346,13 @@ function TodoListCard({
                                         <button
                                             type="button"
                                             className="btn btn-outline-primary btn-sm"
-                                            onClick={() => onStartEditTask(task)}
-                                            disabled={busy || editingTaskId === task.id}
+                                            onClick={() =>
+                                                onStartEditTask(task)
+                                            }
+                                            disabled={
+                                                busy ||
+                                                editingTaskId === task.id
+                                            }
                                         >
                                             Modifier
                                         </button>

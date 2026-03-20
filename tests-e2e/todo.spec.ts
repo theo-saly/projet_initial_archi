@@ -111,12 +111,16 @@ test.describe('Workflow Front E2E', () => {
         await loginUser(page, email, password);
         await createProject(page, projectName);
 
-        const projectForm = page.locator('section.card form.row.g-3.align-items-end',);
+        const projectForm = page.locator(
+            'section.card form.row.g-3.align-items-end',
+        );
         await projectForm.locator('input').first().fill(nextProjectName);
         await projectForm.locator('input').nth(1).fill(nextProjectDescription);
         await projectForm.locator('button[type="submit"]').click();
 
-        await expect(page.locator('.alert-success')).toContainText('Le projet a bien été mis à jour.',);
+        await expect(page.locator('.alert-success')).toContainText(
+            'Le projet a bien été mis à jour.',
+        );
         await expect(projectForm.locator('input').first()).toHaveValue(
             nextProjectName,
         );
@@ -162,11 +166,21 @@ test.describe('Workflow Front E2E', () => {
         });
         await editingTaskItem.locator('input').first().fill(nextTaskTitle);
         await editingTaskItem.locator('input').nth(1).fill(nextTaskDescription);
-        await editingTaskItem.getByRole('button', { name: 'Enregistrer' }).click();
+        await editingTaskItem
+            .getByRole('button', { name: 'Enregistrer' })
+            .click();
 
-        await expect(page.locator('.alert-success')).toContainText('Tache mise a jour.',);
-        await expect(page.locator('article.task-item h3', { hasText: nextTaskTitle }),).toBeVisible();
-        await expect(page.locator('article.task-item p', {hasText: nextTaskDescription,}),).toBeVisible();
+        await expect(page.locator('.alert-success')).toContainText(
+            'Tache mise a jour.',
+        );
+        await expect(
+            page.locator('article.task-item h3', { hasText: nextTaskTitle }),
+        ).toBeVisible();
+        await expect(
+            page.locator('article.task-item p', {
+                hasText: nextTaskDescription,
+            }),
+        ).toBeVisible();
     });
 
     test('Completion tache', async ({ page }) => {

@@ -26,7 +26,9 @@ router.post('/register', (req, res) => {
         consent === '1';
     const user = createUser(email, password, consentBool);
     if (!user) {
-        return res.status(409).json({ error: 'Un compte avec cet email existe déjà' });
+        return res
+            .status(409)
+            .json({ error: 'Un compte avec cet email existe déjà' });
     }
     res.status(201).json({
         id: user.id,
@@ -51,7 +53,10 @@ router.delete('/profile', (req, res) => {
     if (!authHeader) return res.status(401).json({ error: 'Token manquant' });
     const token = authHeader.split(' ')[1];
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'SECRET_KEY') as TokenPayload;
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET || 'SECRET_KEY',
+        ) as TokenPayload;
         const success = deleteUser(decoded.id);
         if (!success)
             return res.status(404).json({ error: 'Utilisateur non trouvé' });

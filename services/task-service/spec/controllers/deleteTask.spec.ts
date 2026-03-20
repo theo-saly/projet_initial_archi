@@ -11,6 +11,6 @@ test('supprimer une tâche', async () => {
 
     await deleteTask(req, res);
 
-    expect((db.removeTask as jest.Mock)).toHaveBeenCalledWith('task-123');
+    expect(db.removeTask as jest.Mock).toHaveBeenCalledWith('task-123');
     expect(res.sendStatus).toHaveBeenCalledWith(200);
 });

@@ -20,7 +20,11 @@ const PROJECT = {
 };
 
 function mockRes() {
-    return { send: jest.fn(), status: jest.fn().mockReturnThis(), json: jest.fn() };
+    return {
+        send: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+    };
 }
 
 function mockFetchWith(data: unknown) {

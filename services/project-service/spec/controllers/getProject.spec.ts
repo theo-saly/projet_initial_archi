@@ -15,7 +15,11 @@ test('récupérer un projet par ID', async () => {
     (db.getProject as jest.Mock).mockResolvedValue(project);
 
     const req = { params: { id: 'proj-1' }, query: {} };
-    const res = { send: jest.fn(), status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const res = {
+        send: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+    };
 
     await getProject(req, res);
 
@@ -26,7 +30,11 @@ test('retourner 404 si projet inexistant', async () => {
     (db.getProject as jest.Mock).mockResolvedValue(undefined);
 
     const req = { params: { id: 'inexistant' }, query: {} };
-    const res = { send: jest.fn(), status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const res = {
+        send: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+    };
 
     await getProject(req, res);
 
@@ -45,6 +53,6 @@ test('lister les projets par ownerId', async () => {
 
     await getProject(req, res);
 
-    expect((db.getProjects as jest.Mock)).toHaveBeenCalledWith('user-1');
+    expect(db.getProjects as jest.Mock).toHaveBeenCalledWith('user-1');
     expect(res.send).toHaveBeenCalledWith(projects);
 });
