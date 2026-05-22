@@ -31,142 +31,138 @@ jobs:
                       frontend:
                         - 'frontend/**'
 
-    # ─── Tests unitaires (par service modifié) ───
+    # ─── Tests unitaires (par service) ───
     tests:
         needs: detect-changes
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                include:
-                    - service: auth-service
-                      changed: ${{ needs.detect-changes.outputs.auth }}
-                    - service: project-service
-                      changed: ${{ needs.detect-changes.outputs.project }}
-                    - service: task-service
-                      changed: ${{ needs.detect-changes.outputs.task }}
-                    - service: notification-service
-                      changed: ${{ needs.detect-changes.outputs.notification }}
+                service: [auth-service, project-service, task-service, notification-service]
         steps:
             - uses: actions/checkout@v4
-              if: matrix.changed == 'true'
+
+            - name: Vérifier si modifié
+              id: check
+              run: |
+                  if [ "${{ matrix.service }}" = "auth-service" ]; then echo "changed=${{ needs.detect-changes.outputs.auth }}" >> $GITHUB_OUTPUT; fi
+                  if [ "${{ matrix.service }}" = "project-service" ]; then echo "changed=${{ needs.detect-changes.outputs.project }}" >> $GITHUB_OUTPUT; fi
+                  if [ "${{ matrix.service }}" = "task-service" ]; then echo "changed=${{ needs.detect-changes.outputs.task }}" >> $GITHUB_OUTPUT; fi
+                  if [ "${{ matrix.service }}" = "notification-service" ]; then echo "changed=${{ needs.detect-changes.outputs.notification }}" >> $GITHUB_OUTPUT; fi
 
             - uses: actions/setup-node@v4
-              if: matrix.changed == 'true'
+              if: steps.check.outputs.changed == 'true'
               with:
                   node-version: 20
                   cache: 'npm'
 
             - run: npm ci
-              if: matrix.changed == 'true'
+              if: steps.check.outputs.changed == 'true'
 
             - name: Tests unitaires ${{ matrix.service }}
-              if: matrix.changed == 'true'
+              if: steps.check.outputs.changed == 'true'
               run: npx jest --projects services/${{ matrix.service }} --coverage
 
             - name: Upload couverture de test
-              if: matrix.changed == 'true'
+              if: steps.check.outputs.changed == 'true'
               uses: actions/upload-artifact@v4
               with:
-                name: coverage-${{ matrix.service }}
-                path: services/${{ matrix.service }}/coverage/
+                  name: coverage-${{ matrix.service }}
+                  path: services/${{ matrix.service }}/coverage/
 
-    # ─── ESLint (par service modifié) ───
+    # ─── ESLint (par service) ───
     lint:
         needs: detect-changes
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                include:
-                    - service: auth-service
-                      changed: ${{ needs.detect-changes.outputs.auth }}
-                    - service: project-service
-                      changed: ${{ needs.detect-changes.outputs.project }}
-                    - service: task-service
-                      changed: ${{ needs.detect-changes.outputs.task }}
-                    - service: notification-service
-                      changed: ${{ needs.detect-changes.outputs.notification }}
+                service: [auth-service, project-service, task-service, notification-service]
         steps:
             - uses: actions/checkout@v4
-              if: matrix.changed == 'true'
+
+            - name: Vérifier si modifié
+              id: check
+              run: |
+                  if [ "${{ matrix.service }}" = "auth-service" ]; then echo "changed=${{ needs.detect-changes.outputs.auth }}" >> $GITHUB_OUTPUT; fi
+                  if [ "${{ matrix.service }}" = "project-service" ]; then echo "changed=${{ needs.detect-changes.outputs.project }}" >> $GITHUB_OUTPUT; fi
+                  if [ "${{ matrix.service }}" = "task-service" ]; then echo "changed=${{ needs.detect-changes.outputs.task }}" >> $GITHUB_OUTPUT; fi
+                  if [ "${{ matrix.service }}" = "notification-service" ]; then echo "changed=${{ needs.detect-changes.outputs.notification }}" >> $GITHUB_OUTPUT; fi
 
             - uses: actions/setup-node@v4
-              if: matrix.changed == 'true'
+              if: steps.check.outputs.changed == 'true'
               with:
                   node-version: 20
                   cache: 'npm'
 
             - run: npm ci
-              if: matrix.changed == 'true'
+              if: steps.check.outputs.changed == 'true'
 
             - name: ESLint ${{ matrix.service }}
-              if: matrix.changed == 'true'
+              if: steps.check.outputs.changed == 'true'
               run: npx eslint services/${{ matrix.service }}/src
 
-    # ─── TypeScript check (par service modifié) ───
+    # ─── TypeScript check (par service) ───
     typecheck:
         needs: detect-changes
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                include:
-                    - service: auth-service
-                      changed: ${{ needs.detect-changes.outputs.auth }}
-                    - service: project-service
-                      changed: ${{ needs.detect-changes.outputs.project }}
-                    - service: task-service
-                      changed: ${{ needs.detect-changes.outputs.task }}
-                    - service: notification-service
-                      changed: ${{ needs.detect-changes.outputs.notification }}
+                service: [auth-service, project-service, task-service, notification-service]
         steps:
             - uses: actions/checkout@v4
-              if: matrix.changed == 'true'
+
+            - name: Vérifier si modifié
+              id: check
+              run: |
+                  if [ "${{ matrix.service }}" = "auth-service" ]; then echo "changed=${{ needs.detect-changes.outputs.auth }}" >> $GITHUB_OUTPUT; fi
+                  if [ "${{ matrix.service }}" = "project-service" ]; then echo "changed=${{ needs.detect-changes.outputs.project }}" >> $GITHUB_OUTPUT; fi
+                  if [ "${{ matrix.service }}" = "task-service" ]; then echo "changed=${{ needs.detect-changes.outputs.task }}" >> $GITHUB_OUTPUT; fi
+                  if [ "${{ matrix.service }}" = "notification-service" ]; then echo "changed=${{ needs.detect-changes.outputs.notification }}" >> $GITHUB_OUTPUT; fi
 
             - uses: actions/setup-node@v4
-              if: matrix.changed == 'true'
+              if: steps.check.outputs.changed == 'true'
               with:
                   node-version: 20
                   cache: 'npm'
 
             - run: npm ci
-              if: matrix.changed == 'true'
+              if: steps.check.outputs.changed == 'true'
 
             - name: TypeScript check ${{ matrix.service }}
-              if: matrix.changed == 'true'
+              if: steps.check.outputs.changed == 'true'
               run: npx tsc --noEmit -p services/${{ matrix.service }}/tsconfig.json
 
-    # ─── Build Docker multi-arch (par service modifié) ───
+    # ─── Build Docker multi-arch (par service) ───
     build:
         needs: detect-changes
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                include:
-                    - service: auth-service
-                      changed: ${{ needs.detect-changes.outputs.auth }}
-                    - service: project-service
-                      changed: ${{ needs.detect-changes.outputs.project }}
-                    - service: task-service
-                      changed: ${{ needs.detect-changes.outputs.task }}
-                    - service: notification-service
-                      changed: ${{ needs.detect-changes.outputs.notification }}
+                service: [auth-service, project-service, task-service, notification-service]
         steps:
             - uses: actions/checkout@v4
-              if: matrix.changed == 'true'
+
+            - name: Vérifier si modifié
+              id: check
+              run: |
+                  if [ "${{ matrix.service }}" = "auth-service" ]; then echo "changed=${{ needs.detect-changes.outputs.auth }}" >> $GITHUB_OUTPUT; fi
+                  if [ "${{ matrix.service }}" = "project-service" ]; then echo "changed=${{ needs.detect-changes.outputs.project }}" >> $GITHUB_OUTPUT; fi
+                  if [ "${{ matrix.service }}" = "task-service" ]; then echo "changed=${{ needs.detect-changes.outputs.task }}" >> $GITHUB_OUTPUT; fi
+                  if [ "${{ matrix.service }}" = "notification-service" ]; then echo "changed=${{ needs.detect-changes.outputs.notification }}" >> $GITHUB_OUTPUT; fi
 
             - name: Setup QEMU
-              if: matrix.changed == 'true'
+              if: steps.check.outputs.changed == 'true'
               uses: docker/setup-qemu-action@v3
 
             - name: Setup Docker Buildx
-              if: matrix.changed == 'true'
+              if: steps.check.outputs.changed == 'true'
               uses: docker/setup-buildx-action@v3
 
             - name: Build image ${{ matrix.service }}
-              if: matrix.changed == 'true'
+              if: steps.check.outputs.changed == 'true'
               uses: docker/build-push-action@v6
               with:
                   context: ./services/${{ matrix.service }}
@@ -183,11 +179,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                include:
-                    - service: auth-service
-                    - service: project-service
-                    - service: task-service
-                    - service: notification-service
+                service: [auth-service, project-service, task-service, notification-service]
         steps:
             - uses: actions/checkout@v4
             - name: Build image pour scan
@@ -215,11 +207,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                include:
-                    - service: auth-service
-                    - service: project-service
-                    - service: task-service
-                    - service: notification-service
+                service: [auth-service, project-service, task-service, notification-service]
         steps:
             - uses: actions/checkout@v4
             - uses: hadolint/hadolint-action@v3.1.0
