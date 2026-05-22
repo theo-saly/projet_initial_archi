@@ -272,7 +272,7 @@ jobs:
                   cache: 'npm'
             - run: npm ci
             - name: Vérification des licences
-              run: npx license-checker --onlyAllow 'MIT;ISC;BSD-2-Clause;BSD-3-Clause;Apache-2.0;0BSD;CC-BY-4.0;CC0-1.0;Python-2.0;Unlicense'
+              run: npx license-checker --onlyAllow 'MIT;ISC;BSD-2-Clause;BSD-3-Clause;Apache-2.0;0BSD;CC-BY-4.0;CC0-1.0;Python-2.0;Unlicense;BlueOak-1.0.0'
 
     compose-config:
         runs-on: ubuntu-latest
