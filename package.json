@@ -20,7 +20,7 @@
     "uuid": "^13.0.0",
     "wait-port": "^1.1.0"
   },
-  "resolutions": {
+  "overrides": {
     "ansi-regex": "5.0.1"
   },
   "prettier": {
@@ -50,5 +50,11 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.0"
-  }
+  },
+  "workspaces": [
+    "services/auth-service",
+    "services/project-service",
+    "services/task-service",
+    "services/notification-service"
+  ]
 }
