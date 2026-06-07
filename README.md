@@ -185,10 +185,16 @@ cd projet_initial_archi
 2. **Créer le fichier `.env`**
 
 ```bash
+# Linux / macOS
 cp .env.example .env
 ```
 
-Adapter les valeurs si nécessaire (credentials SMTP, secret JWT, etc.).
+```powershell
+# Windows (PowerShell)
+Copy-Item .env.example .env
+```
+
+Renseigner ensuite les valeurs SMTP (`SMTP_USER`, `SMTP_PASS`, etc.) et le `JWT_SECRET` dans le `.env` créé.
 
 3. **Installer les dépendances (pour les tests et le linting en local)**
 
@@ -204,7 +210,13 @@ docker compose up --build
 
 ### Démarrage avec MySQL
 
-Lancer avec le profil `mysql`, en modifiant la variable d'environnement puis faire :
+Dans le fichier `.env`, définir :
+
+```env
+DB_TYPE=mysql
+```
+
+Puis lancer avec le profil `mysql` :
 
 ```bash
 docker compose --profile mysql up --build
@@ -433,8 +445,9 @@ npx playwright test
 }
 ```
 
-# Voir les logs de notification
-```
+### Voir les logs de notification
+
+```bash
 docker compose logs notification-service
 ```
 
