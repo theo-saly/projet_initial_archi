@@ -69,7 +69,7 @@ jobs:
 
             - name: Publier résultats tests
               uses: dorny/test-reporter@v1
-              if: always()
+              if: always() && steps.check.outputs.changed == 'true'
               with:
                   name: Tests ${{ matrix.service }}
                   path: junit-${{ matrix.service }}.xml
