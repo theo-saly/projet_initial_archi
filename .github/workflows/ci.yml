@@ -35,6 +35,8 @@ jobs:
     tests:
         needs: detect-changes
         runs-on: ubuntu-latest
+        permissions:
+            checks: write
         strategy:
             fail-fast: false
             matrix:
@@ -61,7 +63,17 @@ jobs:
 
             - name: Tests unitaires ${{ matrix.service }}
               if: steps.check.outputs.changed == 'true'
-              run: npx jest --projects services/${{ matrix.service }} --coverage
+              env:
+                  JEST_JUNIT_OUTPUT_FILE: junit-${{ matrix.service }}.xml
+              run: npx jest --projects services/${{ matrix.service }} --coverage --reporters=default --reporters=jest-junit
+
+            - name: Publier résultats tests
+              uses: dorny/test-reporter@v1
+              if: always() && steps.check.outputs.changed == 'true'
+              with:
+                  name: Tests ${{ matrix.service }}
+                  path: junit-${{ matrix.service }}.xml
+                  reporter: jest-junit
 
             - name: Upload couverture de test
               if: steps.check.outputs.changed == 'true'
@@ -176,6 +188,8 @@ jobs:
     trivy:
         needs: build
         runs-on: ubuntu-latest
+        permissions:
+            security-events: write
         strategy:
             fail-fast: false
             matrix:
@@ -188,9 +202,15 @@ jobs:
               uses: aquasecurity/trivy-action@master
               with:
                   image-ref: ${{ matrix.service }}:scan
-                  format: 'table'
+                  format: 'sarif'
+                  output: 'trivy-${{ matrix.service }}.sarif'
                   severity: 'CRITICAL,HIGH'
-                  exit-code: '0'
+            - name: Upload résultats Trivy vers GitHub Security
+              uses: github/codeql-action/upload-sarif@v3
+              if: always()
+              with:
+                  sarif_file: 'trivy-${{ matrix.service }}.sarif'
+                  category: 'trivy-${{ matrix.service }}'
 
     # ─── Checks globaux (tout le projet) ───
     prettier:
