@@ -6,27 +6,7 @@ on:
     workflow_dispatch:
 
 jobs:
-    check-activity:
-        runs-on: ubuntu-latest
-        outputs:
-            has-changes: ${{ steps.check.outputs.has-changes }}
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
-            - name: Vérifier si des commits dans les dernières 24h
-              id: check
-              run: |
-                  COMMITS=$(git log --oneline --since="24 hours ago" | wc -l)
-                  if [ "$COMMITS" -gt 0 ]; then
-                    echo "has-changes=true" >> $GITHUB_OUTPUT
-                  else
-                    echo "has-changes=false" >> $GITHUB_OUTPUT
-                  fi
-
     e2e-tests:
-        needs: check-activity
-        if: needs.check-activity.outputs.has-changes == 'true'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4

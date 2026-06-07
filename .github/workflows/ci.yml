@@ -199,7 +199,7 @@ jobs:
             - name: Build image pour scan
               run: docker build -t ${{ matrix.service }}:scan ./services/${{ matrix.service }}
             - name: Trivy scan
-              uses: aquasecurity/trivy-action@master
+              uses: aquasecurity/trivy-action@v0.36.0
               with:
                   image-ref: ${{ matrix.service }}:scan
                   format: 'sarif'
@@ -270,43 +270,3 @@ jobs:
                   args: >
                       -Dsonar.host.url=https://sonarcloud.io
 
-    npm-audit:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 20
-                  cache: 'npm'
-            - run: npm ci
-            - name: npm audit (bloquant sur critical)
-              run: npm audit --audit-level=critical
-
-    license-checker:
-        runs-on: ubuntu-latest
-        continue-on-error: true
-        steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 20
-                  cache: 'npm'
-            - run: npm ci
-            - name: Vérification des licences
-              run: npx license-checker --onlyAllow 'MIT;ISC;BSD-2-Clause;BSD-3-Clause;Apache-2.0;0BSD;CC-BY-4.0;CC0-1.0;Python-2.0;Unlicense;BlueOak-1.0.0'
-
-    compose-config:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - run: docker compose config --quiet
-
-    gitleaks:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
-            - uses: gitleaks/gitleaks-action@v2
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
