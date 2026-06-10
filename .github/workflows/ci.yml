@@ -231,7 +231,7 @@ jobs:
                 service: [auth-service, project-service, task-service, notification-service]
         steps:
             - uses: actions/checkout@v4
-            - uses: hadolint/hadolint-action@v3.1.0
+            - uses: hadolint/hadolint-action@v3.3.0
               with:
                   dockerfile: services/${{ matrix.service }}/Dockerfile
 
