@@ -14,6 +14,7 @@ jobs:
             task: ${{ steps.filter.outputs.task }}
             notification: ${{ steps.filter.outputs.notification }}
             frontend: ${{ steps.filter.outputs.frontend }}
+            ci: ${{ steps.filter.outputs.ci }}
         steps:
             - uses: actions/checkout@v4
             - uses: dorny/paths-filter@v3
@@ -30,6 +31,9 @@ jobs:
                         - 'services/notification-service/**'
                       frontend:
                         - 'frontend/**'
+                      ci:
+                        - '.github/workflows/**'
+                        - '.github/dependabot.yml'
 
     # ─── Tests unitaires (par service) ───
     tests:
@@ -248,6 +252,7 @@ jobs:
 
     sonarcloud:
         needs: tests
+        if: github.actor != 'dependabot[bot]'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
