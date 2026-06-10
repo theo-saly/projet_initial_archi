@@ -6,6 +6,9 @@
   "scripts": {
     "prettify": "prettier -l --write \"**/*.{js,ts}\"",
     "test": "jest",
+    "test:integration": "npm test --workspace services/project-service && npm test --workspace services/task-service",
+    "migrate:up": "npm run migrate:up --workspace services/project-service && npm run migrate:up --workspace services/task-service",
+    "migrate:down": "npm run migrate:down --workspace services/task-service && npm run migrate:down --workspace services/project-service",
     "dev": "nodemon -L --exec ts-node src/index.ts",
     "lint": "eslint frontend/js services/api-gateway/src services/auth-service/src services/project-service/src services/task-service/src services/notification-service/src"
   },

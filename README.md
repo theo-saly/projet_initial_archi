@@ -13,16 +13,17 @@ Application de gestion de projet Kanban construite en **microservices** avec **N
 3. [API](#api)
 4. [Frontend](#frontend)
 5. [Persistance](#persistance)
-6. [Événements (Redis Streams)](#événements-redis-streams)
-7. [Lancement](#lancement)
-8. [Variables d'environnement](#variables-denvironnement)
-9. [Tests](#tests)
+6. [Migrations des bases de données](#migrations-des-bases-de-données)
+7. [Événements (Redis Streams)](#événements-redis-streams)
+8. [Lancement](#lancement)
+9. [Variables d'environnement](#variables-denvironnement)
+10. [Tests](#tests)
    - [Tests unitaires (Jest)](#tests-unitaires-jest)
    - [Tests d'architecture](#tests-darchitecture)
    - [Tests E2E (Playwright)](#tests-e2e-playwright)
-10. [Qualité de code](#qualité-de-code)
-11. [ADR](#adr)
-12. [Trello](#trello)
+11. [Qualité de code](#qualité-de-code)
+12. [ADR](#adr)
+13. [Trello](#trello)
 
 ---
 
@@ -166,6 +167,70 @@ La sélection se fait automatiquement dans `persistence/index.ts` :
 if (process.env.NODE_ENV === 'test') repository = inmemoryRepo;
 else if (process.env.DB_TYPE === 'mysql') repository = mysqlRepo;
 else repository = sqliteRepo;
+```
+
+---
+
+## Migrations des bases de données
+
+Les migrations sont versionnees dans les services qui possedent une base de donnees :
+
+| Service | Dossier migrations | Base cible |
+|---------|--------------------|------------|
+| `project-service` | `services/project-service/src/migrations` | `projects` |
+| `task-service` | `services/task-service/src/migrations` | `tasks` |
+
+### En developpement
+
+En developpement, les migrations sont lancees automatiquement au demarrage des microservices (`NODE_ENV != production`).
+
+```bash
+docker compose up --build
+```
+
+Elles peuvent aussi etre lancees manuellement :
+
+```bash
+npm run migrate:up
+```
+
+### En production
+
+En production, les migrations sont lancees par des conteneurs dedies afin de separer l'evolution du schema du demarrage applicatif :
+
+```bash
+NODE_ENV=production docker compose --profile production run --rm project-migrations
+NODE_ENV=production docker compose --profile production run --rm task-migrations
+```
+
+Les services applicatifs ne lancent pas les migrations quand `NODE_ENV=production`.
+
+### Rollback sans perte de donnees
+
+Chaque migration possede une direction `up` et une direction `down`.
+
+- Les nouvelles colonnes ajoutent une valeur par defaut (`priority = normal` pour les taches, `visibility = private` pour les projets).
+- Les rollbacks reconstruisent la table sans la colonne retiree et recopient les donnees conservees.
+- Les migrations de creation de table n'ont pas de rollback destructif afin d'eviter une suppression accidentelle des donnees.
+
+Rollback de la derniere migration :
+
+```bash
+npm run migrate:down
+```
+
+### Tests de migration et integration
+
+Les tests de migration creent des bases SQLite temporaires, executent les migrations, verifient les valeurs par defaut puis executent un rollback en validant que les lignes existantes restent presentes.
+
+```bash
+npm run test:integration
+```
+
+La suite globale execute aussi ces tests :
+
+```bash
+npm test
 ```
 
 ---
@@ -472,7 +537,11 @@ docker compose logs notification-service
 
 ## ADR
 
-Nos ADR se trouve sur le trello
+Les decisions d'architecture sont documentees dans le dossier [`docs/adr`](docs/adr).
+
+- [ADR 0001 - Versioning des API, API Gateway et OpenAPI](docs/adr/0001-versioning-api-gateway-openapi.md)
+- [ADR 0002 - Migrations des bases de donnees](docs/adr/0002-migrations-bases-de-donnees.md)
+
 ---
 
 ## Trello

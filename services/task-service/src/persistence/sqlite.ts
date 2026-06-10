@@ -3,14 +3,22 @@ import path from 'path';
 
 import sqlite3 from 'sqlite3';
 import fs from 'fs';
-const location = process.env.SQLITE_DB_LOCATION || '/etc/tasks/task.db';
+import { migrate } from '../migrations/runner';
+
+const location =
+    process.env.SQLITE_DB_LOCATION ||
+    path.join(process.cwd(), '.sqlite', 'task.db');
 
 let db;
 
-function init() {
+async function init() {
     const dirName = path.dirname(location);
     if (!fs.existsSync(dirName)) {
         fs.mkdirSync(dirName, { recursive: true });
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+        await migrate('up');
     }
 
     return new Promise<void>((acc, rej) => {
@@ -20,13 +28,7 @@ function init() {
             if (process.env.NODE_ENV !== 'test')
                 console.log(`Using sqlite database at ${location}`);
 
-            db.run(
-                'CREATE TABLE IF NOT EXISTS tasks (id varchar(36), title varchar(255), description text, status varchar(255), echeance date, projectId varchar(36), createdAt date, updatedAt date)',
-                (err) => {
-                    if (err) return rej(err);
-                    acc();
-                },
-            );
+            acc();
         });
     });
 }
