@@ -11,7 +11,7 @@ function DashboardPage({ token, navigate, busy, setBusy, pushMessage }) {
             setProjects([]);
             return [];
         }
-        const response = await fetch(`/api/projects?ownerId=${userId}`, {
+        const response = await fetch(apiUrl(`/projects?ownerId=${userId}`), {
             headers: buildHeaders(token, false),
         });
         const payload = await parseApiResponse(response);
@@ -53,7 +53,7 @@ function DashboardPage({ token, navigate, busy, setBusy, pushMessage }) {
 
         setBusy(true);
         try {
-            const response = await fetch('/api/projects', {
+            const response = await fetch(apiUrl('/projects'), {
                 method: 'POST',
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({
@@ -81,7 +81,7 @@ function DashboardPage({ token, navigate, busy, setBusy, pushMessage }) {
     const deleteProject = async (projectId) => {
         setBusy(true);
         try {
-            const response = await fetch(`/api/projects/${projectId}`, {
+            const response = await fetch(apiUrl(`/projects/${projectId}`), {
                 method: 'DELETE',
                 headers: buildHeaders(token, false),
             });
@@ -100,7 +100,7 @@ function DashboardPage({ token, navigate, busy, setBusy, pushMessage }) {
         const nextStatus = project.status === 'cloturé' ? 'ouvert' : 'cloturé';
         setBusy(true);
         try {
-            const response = await fetch(`/api/projects/${project.id}`, {
+            const response = await fetch(apiUrl(`/projects/${project.id}`), {
                 method: 'PUT',
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({

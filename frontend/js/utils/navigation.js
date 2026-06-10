@@ -22,6 +22,10 @@ function buildHeaders(token, includeJson) {
     return headers;
 }
 
+function apiUrl(path) {
+    return `/api/v1${path}`;
+}
+
 function getUserIdFromToken(token) {
     if (!token) return null;
     try {

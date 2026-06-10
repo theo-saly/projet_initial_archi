@@ -24,6 +24,7 @@ export default defineConfig([
         normalizePath: "readonly",
         matchProjectPath: "readonly",
         buildHeaders: "readonly",
+        apiUrl: "readonly",
         getUserIdFromToken: "readonly",
         parseApiResponse: "readonly",
       },

@@ -18,7 +18,7 @@ function ProjectPage({
 
     // load le projet
     const loadProject = React.useCallback(async () => {
-        const response = await fetch(`/api/projects/${projectId}`, {
+        const response = await fetch(apiUrl(`/projects/${projectId}`), {
             headers: buildHeaders(token, false),
         });
         const payload = await parseApiResponse(response);
@@ -43,7 +43,9 @@ function ProjectPage({
     // load taches du projet
     const loadTasks = React.useCallback(async () => {
         const response = await fetch(
-            `/api/tasks/by-project?projectId=${encodeURIComponent(projectId)}`,
+            apiUrl(
+                `/tasks/by-project?projectId=${encodeURIComponent(projectId)}`,
+            ),
             {
                 headers: buildHeaders(token, false),
             },
@@ -85,7 +87,7 @@ function ProjectPage({
 
         setBusy(true);
         try {
-            const response = await fetch(`/api/projects/${projectId}`, {
+            const response = await fetch(apiUrl(`/projects/${projectId}`), {
                 method: 'PUT',
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({
@@ -112,7 +114,7 @@ function ProjectPage({
 
         setBusy(true);
         try {
-            const response = await fetch(`/api/projects/${projectId}`, {
+            const response = await fetch(apiUrl(`/projects/${projectId}`), {
                 method: 'PUT',
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({
@@ -134,7 +136,7 @@ function ProjectPage({
 
     // creer tache
     const createTask = async (taskPayload) => {
-        const response = await fetch('/api/tasks', {
+        const response = await fetch(apiUrl('/tasks'), {
             method: 'POST',
             headers: buildHeaders(token, true),
             body: JSON.stringify({
@@ -156,7 +158,7 @@ function ProjectPage({
             throw new Error('Tache introuvable');
         }
 
-        const response = await fetch(`/api/tasks/${taskId}`, {
+        const response = await fetch(apiUrl(`/tasks/${taskId}`), {
             method: 'PUT',
             headers: buildHeaders(token, true),
             body: JSON.stringify({
@@ -173,7 +175,7 @@ function ProjectPage({
 
     // suppr tache
     const deleteTask = async (taskId) => {
-        const response = await fetch(`/api/tasks/${taskId}`, {
+        const response = await fetch(apiUrl(`/tasks/${taskId}`), {
             method: 'DELETE',
             headers: buildHeaders(token, false),
         });

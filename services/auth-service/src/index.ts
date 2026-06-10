@@ -6,5 +6,6 @@ const app = express();
 app.use(express.json());
 
 app.use('/auth', authRouter);
+app.use('/v1/auth', authRouter);
 
 app.listen(3001, () => console.log('Auth service listening on port 3001'));

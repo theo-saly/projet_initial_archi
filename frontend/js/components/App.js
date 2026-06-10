@@ -99,7 +99,7 @@ function App() {
         setBusy(true);
         clearMessage();
         try {
-            const response = await fetch('/api/auth/login', {
+            const response = await fetch(apiUrl('/auth/login'), {
                 method: 'POST',
                 headers: buildHeaders('', true),
                 body: JSON.stringify(credentials),
@@ -125,7 +125,7 @@ function App() {
         setBusy(true);
         clearMessage();
         try {
-            const response = await fetch('/api/auth/register', {
+            const response = await fetch(apiUrl('/auth/register'), {
                 method: 'POST',
                 headers: buildHeaders('', true),
                 body: JSON.stringify(payload),
@@ -155,7 +155,7 @@ function App() {
         setBusy(true);
         clearMessage();
         try {
-            const res = await fetch('/api/auth/profile', {
+            const res = await fetch(apiUrl('/auth/profile'), {
                 method: 'DELETE',
                 headers: buildHeaders(token, false),
             });
