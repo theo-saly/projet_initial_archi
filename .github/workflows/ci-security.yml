@@ -45,3 +45,17 @@ jobs:
         steps:
             - uses: actions/checkout@v4
             - run: docker compose config --quiet
+
+    sonarcloud:
+        runs-on: ubuntu-latest
+        if: github.actor != 'dependabot[bot]' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main')
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - uses: SonarSource/sonarqube-scan-action@v6
+              env:
+                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+              with:
+                  args: >
+                      -Dsonar.host.url=https://sonarcloud.io
