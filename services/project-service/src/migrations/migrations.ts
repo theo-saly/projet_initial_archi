@@ -23,7 +23,7 @@ export const migrations: Migration[] = [
                 updatedAt date DEFAULT CURRENT_TIMESTAMP
             )`,
         ],
-        sqliteDown: [],
+        sqliteDown: ['DROP TABLE IF EXISTS projects'],
         mysqlUp: [
             `CREATE TABLE IF NOT EXISTS projects (
                 id VARCHAR(36) PRIMARY KEY,
@@ -36,7 +36,7 @@ export const migrations: Migration[] = [
                 updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
             )`,
         ],
-        mysqlDown: [],
+        mysqlDown: ['DROP TABLE IF EXISTS projects'],
     },
     {
         id: '002',
