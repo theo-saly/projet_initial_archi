@@ -71,6 +71,25 @@ services:
         depends_on:
             - redis
 
+    frontend:
+        build: ./frontend
+        expose:
+            - '80'
+        depends_on:
+            - auth-service
+            - project-service
+            - task-service
+
+    reverse-proxy:
+        build: ./reverse-proxy
+        ports:
+            - '3000:80'
+        depends_on:
+            - frontend
+            - auth-service
+            - project-service
+            - task-service
+
     mysql-tasks:
         image: mysql:8
         environment:
@@ -99,18 +118,6 @@ services:
         image: redis:7-alpine
         ports:
             - '6379:6379'
-
-    frontend:
-        image: nginx:alpine
-        ports:
-            - '3000:80'
-        volumes:
-            - ./frontend:/usr/share/nginx/html:ro
-            - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-        depends_on:
-            - auth-service
-            - project-service
-            - task-service
 
 volumes:
     auth-data:

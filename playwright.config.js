@@ -1,8 +1,5 @@
-// Configuration Playwright de base
-// Pour lancer : npx playwright test
-
 module.exports = {
-    testDir: './tests-e2e',
+    testDir: './frontend/spec/e2e',
     timeout: 10000,
     retries: 0,
     use: {
