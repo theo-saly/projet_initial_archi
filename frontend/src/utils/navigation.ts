@@ -1,7 +1,4 @@
-export interface AppHeaders {
-    'Content-Type'?: string;
-    Authorization?: string;
-}
+export type AppHeaders = Record<string, string>;
 
 export function normalizePath(pathname: string): string {
     if (!pathname) return '/';
@@ -17,7 +14,7 @@ export function matchProjectPath(pathname: string): string {
 }
 
 export function buildHeaders(token: string, includeJson: boolean): AppHeaders {
-    const headers: AppHeaders = {};
+    const headers: Record<string, string> = {};
     if (includeJson) {
         headers['Content-Type'] = 'application/json';
     }
