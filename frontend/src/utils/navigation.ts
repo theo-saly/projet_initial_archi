@@ -41,8 +41,12 @@ export function getUserIdFromToken(token: string): string | null {
     }
 }
 
-export async function parseApiResponse<T = unknown>(response: Response): Promise<T> {
-    const payload = await response.json().catch(() => ({})) as { error?: string } & T;
+export async function parseApiResponse<T = unknown>(
+    response: Response,
+): Promise<T> {
+    const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+    } & T;
     if (!response.ok) {
         throw new Error((payload as { error?: string }).error || 'Erreur API');
     }

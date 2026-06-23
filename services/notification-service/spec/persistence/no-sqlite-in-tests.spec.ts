@@ -9,7 +9,10 @@ function getTestFiles(dir: string, skipDirs: string[] = []): string[] {
         if (entry.isDirectory()) {
             if (skipDirs.includes(entry.name)) continue;
             results.push(...getTestFiles(path.join(dir, entry.name), skipDirs));
-        } else if (entry.name.endsWith('.spec.ts') || entry.name.endsWith('.test.ts')) {
+        } else if (
+            entry.name.endsWith('.spec.ts') ||
+            entry.name.endsWith('.test.ts')
+        ) {
             results.push(path.join(dir, entry.name));
         }
     }
@@ -20,7 +23,10 @@ describe('Architecture: isolation de la persistence (notification-service)', () 
     const specDir = path.resolve(__dirname, '..');
 
     test('aucun test ne doit importer sqlite3 directement', () => {
-        const testFiles = getTestFiles(specDir, ['node_modules', 'persistence']);
+        const testFiles = getTestFiles(specDir, [
+            'node_modules',
+            'persistence',
+        ]);
         for (const file of testFiles) {
             const content = fs.readFileSync(file, 'utf-8');
             expect(content).not.toMatch(/require\(\s*['"]sqlite3['"]\s*\)/);
