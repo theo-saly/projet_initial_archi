@@ -59,7 +59,7 @@ if (isDevelopment) {
     });
 }
 
-app.use(`/${apiVersion}/:resource`, async (req: Request, res: Response) => {
+app.use(`/${apiVersion}/:resource/*`, async (req: Request, res: Response) => {
     const resource = String(req.params.resource);
     const serviceName = serviceByResource[resource];
 
@@ -69,7 +69,26 @@ app.use(`/${apiVersion}/:resource`, async (req: Request, res: Response) => {
         });
     }
 
-    const targetUrl = new URL(req.originalUrl, serviceUrls[serviceName]);
+    const upstreamBase = new URL(serviceUrls[serviceName]);
+    const rawTail = String(req.params[0] ?? '');
+    const safeTail = rawTail
+        .split('/')
+        .filter(
+            (segment) =>
+                segment.length > 0 && segment !== '.' && segment !== '..',
+        )
+        .map((segment) => encodeURIComponent(segment))
+        .join('/');
+    const targetUrl = new URL(
+        `/${resource}${safeTail ? `/${safeTail}` : ''}`,
+        upstreamBase,
+    );
+    const query = new URLSearchParams(
+        req.query as Record<string, string>,
+    ).toString();
+    if (query) {
+        targetUrl.search = query;
+    }
 
     try {
         const response = await fetch(targetUrl, {
