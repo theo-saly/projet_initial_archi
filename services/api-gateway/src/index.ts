@@ -8,8 +8,7 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 
 const serviceUrls = {
     auth: process.env.AUTH_SERVICE_URL || 'http://auth-service:3001',
-    projects:
-        process.env.PROJECT_SERVICE_URL || 'http://project-service:3002',
+    projects: process.env.PROJECT_SERVICE_URL || 'http://project-service:3002',
     tasks: process.env.TASK_SERVICE_URL || 'http://task-service:3003',
 };
 

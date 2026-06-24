@@ -55,7 +55,7 @@ test('créer et lire une tâche après migration', async () => {
     });
 });
 
-test('modifier le statut d\'une tâche après migration', async () => {
+test("modifier le statut d'une tâche après migration", async () => {
     await migrate('up');
 
     await withSqliteDatabase(dbPath, async (db) => {
@@ -109,10 +109,9 @@ test('supprimer une tâche après migration', async () => {
 
         await db.run('DELETE FROM tasks WHERE id = ?', ['task-integ-3']);
 
-        const rows = await db.all(
-            'SELECT * FROM tasks WHERE id = ?',
-            ['task-integ-3'],
-        );
+        const rows = await db.all('SELECT * FROM tasks WHERE id = ?', [
+            'task-integ-3',
+        ]);
 
         expect(rows).toHaveLength(0);
     });

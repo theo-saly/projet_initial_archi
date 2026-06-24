@@ -55,7 +55,7 @@ test('créer et lire un projet après migration', async () => {
     });
 });
 
-test('modifier le statut d\'un projet après migration', async () => {
+test("modifier le statut d'un projet après migration", async () => {
     await migrate('up');
 
     await withSqliteDatabase(dbPath, async (db) => {
@@ -109,10 +109,9 @@ test('supprimer un projet après migration', async () => {
 
         await db.run('DELETE FROM projects WHERE id = ?', ['project-integ-3']);
 
-        const rows = await db.all(
-            'SELECT * FROM projects WHERE id = ?',
-            ['project-integ-3'],
-        );
+        const rows = await db.all('SELECT * FROM projects WHERE id = ?', [
+            'project-integ-3',
+        ]);
 
         expect(rows).toHaveLength(0);
     });

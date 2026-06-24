@@ -1,18 +1,20 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-COPY package*.json ./
+COPY tsconfig.json ./
+COPY services/api-gateway/package*.json ./services/api-gateway/
+WORKDIR /app/services/api-gateway
 RUN npm install
 
-COPY . .
+COPY services/api-gateway/ ./
 RUN npm run build
 
 FROM node:20-alpine AS production
-WORKDIR /app
+WORKDIR /app/services/api-gateway
 
-COPY package*.json ./
+COPY services/api-gateway/package*.json ./
 RUN npm install --omit=dev
 
-COPY --from=build /app/dist ./dist
+COPY --from=build /app/services/api-gateway/dist ./dist
 EXPOSE 3005
 CMD ["node", "dist/index.js"]

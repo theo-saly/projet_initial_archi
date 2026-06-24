@@ -199,7 +199,9 @@ async function lastAppliedMigrationSqlite(
     return migrations.find((migration) => migration.id === rows[0]?.id);
 }
 
-async function appliedMigrationIdsMysql(pool: mysql.Pool): Promise<Set<string>> {
+async function appliedMigrationIdsMysql(
+    pool: mysql.Pool,
+): Promise<Set<string>> {
     const [rows] = await pool.execute(`SELECT id FROM ${migrationTable}`);
     return new Set((rows as { id: string }[]).map((row) => row.id));
 }

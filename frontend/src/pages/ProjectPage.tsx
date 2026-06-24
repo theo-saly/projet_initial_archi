@@ -1,32 +1,46 @@
-function ProjectPage({
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+    buildHeaders,
+    getUserIdFromToken,
+    parseApiResponse,
+} from '../utils/navigation';
+import TodoListCard from '../components/todo/TodoListCard';
+import type { Project, Task } from '../types';
+
+interface ProjectPageProps {
+    token: string;
+    projectId: string;
+    navigate: (path: string) => void;
+    busy: boolean;
+    setBusy: (busy: boolean) => void;
+    pushMessage: (type: string, text: string) => void;
+}
+
+export default function ProjectPage({
     token,
     projectId,
     navigate,
     busy,
     setBusy,
     pushMessage,
-}) {
-    // etat
+}: ProjectPageProps) {
     const userId = getUserIdFromToken(token);
-    const [project, setProject] = React.useState(null);
-    const [tasks, setTasks] = React.useState([]);
-    const [loading, setLoading] = React.useState(true);
-    const [projectForm, setProjectForm] = React.useState({
+    const [project, setProject] = useState<Project | null>(null);
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [projectForm, setProjectForm] = useState({
         name: '',
         description: '',
     });
 
-    // load le projet
-    const loadProject = React.useCallback(async () => {
-        const response = await fetch(apiUrl(`/projects/${projectId}`), {
+    const loadProject = useCallback(async (): Promise<Project> => {
+        const response = await fetch(`/api/projects/${projectId}`, {
             headers: buildHeaders(token, false),
         });
-        const payload = await parseApiResponse(response);
+        const payload = await parseApiResponse<Project>(response);
 
-        // check si l'utilisateur accède  à son propre projet
         const userIdStr = String(userId).trim();
         const ownerIdStr = String(payload.ownerId).trim();
-
         if (userIdStr !== ownerIdStr && userIdStr !== 'null') {
             console.error('ACCÈS REFUSÉ:', userIdStr, '!==', ownerIdStr);
             throw new Error('Acces refuse: ce projet ne vous appartient pas');
@@ -40,23 +54,18 @@ function ProjectPage({
         return payload;
     }, [token, projectId, userId]);
 
-    // load taches du projet
-    const loadTasks = React.useCallback(async () => {
+    const loadTasks = useCallback(async (): Promise<Task[]> => {
         const response = await fetch(
-            apiUrl(
-                `/tasks/by-project?projectId=${encodeURIComponent(projectId)}`,
-            ),
-            {
-                headers: buildHeaders(token, false),
-            },
+            `/api/tasks/by-project?projectId=${encodeURIComponent(projectId)}`,
+            { headers: buildHeaders(token, false) },
         );
-        const payload = await parseApiResponse(response);
-        setTasks(Array.isArray(payload) ? payload : []);
-        return Array.isArray(payload) ? payload : [];
+        const payload = await parseApiResponse<Task[] | unknown>(response);
+        const list = Array.isArray(payload) ? payload : [];
+        setTasks(list);
+        return list;
     }, [token, projectId]);
 
-    // load init
-    React.useEffect(() => {
+    useEffect(() => {
         let mounted = true;
         const init = async () => {
             setLoading(true);
@@ -64,30 +73,25 @@ function ProjectPage({
                 await Promise.all([loadProject(), loadTasks()]);
             } catch (err) {
                 if (mounted) {
-                    pushMessage('danger', err.message);
+                    pushMessage('danger', (err as Error).message);
                     navigate('/');
                 }
             } finally {
-                if (mounted) {
-                    setLoading(false);
-                }
+                if (mounted) setLoading(false);
             }
         };
-
         init();
         return () => {
             mounted = false;
         };
     }, [loadProject, loadTasks, pushMessage, navigate]);
 
-    // update project
-    const saveProject = async (event) => {
+    const saveProject = async (event: React.FormEvent) => {
         event.preventDefault();
         if (!project) return;
-
         setBusy(true);
         try {
-            const response = await fetch(apiUrl(`/projects/${projectId}`), {
+            const response = await fetch(`/api/projects/${projectId}`, {
                 method: 'PUT',
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({
@@ -102,19 +106,17 @@ function ProjectPage({
             await loadProject();
             pushMessage('success', 'Le projet a bien été mis à jour.');
         } catch (err) {
-            pushMessage('danger', err.message);
+            pushMessage('danger', (err as Error).message);
         } finally {
             setBusy(false);
         }
     };
 
-    // update status projet
-    const updateProjectStatus = async (nextStatus) => {
+    const updateProjectStatus = async (nextStatus: string) => {
         if (!project) return;
-
         setBusy(true);
         try {
-            const response = await fetch(apiUrl(`/projects/${projectId}`), {
+            const response = await fetch(`/api/projects/${projectId}`, {
                 method: 'PUT',
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({
@@ -128,15 +130,18 @@ function ProjectPage({
             await loadProject();
             pushMessage('success', `Le projet a bien été ${nextStatus}.`);
         } catch (err) {
-            pushMessage('danger', err.message);
+            pushMessage('danger', (err as Error).message);
         } finally {
             setBusy(false);
         }
     };
 
-    // creer tache
-    const createTask = async (taskPayload) => {
-        const response = await fetch(apiUrl('/tasks'), {
+    const createTask = async (taskPayload: {
+        title: string;
+        description: string;
+        status: string;
+    }) => {
+        const response = await fetch('/api/tasks', {
             method: 'POST',
             headers: buildHeaders(token, true),
             body: JSON.stringify({
@@ -151,14 +156,10 @@ function ProjectPage({
         return loadTasks();
     };
 
-    // update tache
-    const updateTask = async (taskId, updates) => {
+    const updateTask = async (taskId: string, updates: Partial<Task>) => {
         const sourceTask = tasks.find((item) => item.id === taskId);
-        if (!sourceTask) {
-            throw new Error('Tache introuvable');
-        }
-
-        const response = await fetch(apiUrl(`/tasks/${taskId}`), {
+        if (!sourceTask) throw new Error('Tache introuvable');
+        const response = await fetch(`/api/tasks/${taskId}`, {
             method: 'PUT',
             headers: buildHeaders(token, true),
             body: JSON.stringify({
@@ -173,9 +174,8 @@ function ProjectPage({
         return loadTasks();
     };
 
-    // suppr tache
-    const deleteTask = async (taskId) => {
-        const response = await fetch(apiUrl(`/tasks/${taskId}`), {
+    const deleteTask = async (taskId: string) => {
+        const response = await fetch(`/api/tasks/${taskId}`, {
             method: 'DELETE',
             headers: buildHeaders(token, false),
         });
@@ -183,13 +183,9 @@ function ProjectPage({
         return loadTasks();
     };
 
-    if (loading) {
-        return <p className="text-muted">Chargement du projet...</p>;
-    }
-
-    if (!project) {
+    if (loading) return <p className="text-muted">Chargement du projet...</p>;
+    if (!project)
         return <div className="alert alert-danger">Projet introuvable.</div>;
-    }
 
     return (
         <div className="page-project-focus d-grid gap-4">

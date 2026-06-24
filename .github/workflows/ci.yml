@@ -44,7 +44,13 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                service: [auth-service, project-service, task-service, notification-service]
+                service:
+                    [
+                        auth-service,
+                        project-service,
+                        task-service,
+                        notification-service,
+                    ]
         steps:
             - uses: actions/checkout@v4
 
@@ -69,7 +75,7 @@ jobs:
               if: steps.check.outputs.changed == 'true'
               env:
                   JEST_JUNIT_OUTPUT_FILE: junit-${{ matrix.service }}.xml
-              run: npx jest --projects services/${{ matrix.service }} --coverage --reporters=default --reporters=jest-junit
+              run: npx jest --testPathPatterns="services/${{ matrix.service }}" --coverage --reporters=default --reporters=jest-junit
 
             - name: Publier résultats tests
               uses: dorny/test-reporter@v1
@@ -93,7 +99,13 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                service: [auth-service, project-service, task-service, notification-service]
+                service:
+                    [
+                        auth-service,
+                        project-service,
+                        task-service,
+                        notification-service,
+                    ]
         steps:
             - uses: actions/checkout@v4
 
@@ -125,7 +137,13 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                service: [auth-service, project-service, task-service, notification-service]
+                service:
+                    [
+                        auth-service,
+                        project-service,
+                        task-service,
+                        notification-service,
+                    ]
         steps:
             - uses: actions/checkout@v4
 
@@ -157,7 +175,13 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                service: [auth-service, project-service, task-service, notification-service]
+                service:
+                    [
+                        auth-service,
+                        project-service,
+                        task-service,
+                        notification-service,
+                    ]
         steps:
             - uses: actions/checkout@v4
 
@@ -181,7 +205,8 @@ jobs:
               if: steps.check.outputs.changed == 'true'
               uses: docker/build-push-action@v6
               with:
-                  context: ./services/${{ matrix.service }}
+                  context: .
+                  file: services/${{ matrix.service }}/Dockerfile
                   platforms: linux/amd64,linux/arm64
                   push: false
                   tags: ${{ matrix.service }}:${{ github.sha }}
@@ -197,11 +222,17 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                service: [auth-service, project-service, task-service, notification-service]
+                service:
+                    [
+                        auth-service,
+                        project-service,
+                        task-service,
+                        notification-service,
+                    ]
         steps:
             - uses: actions/checkout@v4
             - name: Build image pour scan
-              run: docker build -t ${{ matrix.service }}:scan ./services/${{ matrix.service }}
+              run: docker build -t ${{ matrix.service }}:scan -f services/${{ matrix.service }}/Dockerfile .
             - name: Trivy scan
               uses: aquasecurity/trivy-action@v0.36.0
               with:
@@ -232,7 +263,13 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                service: [auth-service, project-service, task-service, notification-service]
+                service:
+                    [
+                        auth-service,
+                        project-service,
+                        task-service,
+                        notification-service,
+                    ]
         steps:
             - uses: actions/checkout@v4
             - uses: hadolint/hadolint-action@v3.1.0
@@ -274,4 +311,3 @@ jobs:
               with:
                   args: >
                       -Dsonar.host.url=https://sonarcloud.io
-
