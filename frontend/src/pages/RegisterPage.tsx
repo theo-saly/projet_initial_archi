@@ -4,12 +4,25 @@ import type { Message } from '../types';
 interface RegisterPageProps {
     busy: boolean;
     message: Message;
-    onRegister: (payload: { email: string; password: string; consent: boolean }) => Promise<void>;
+    onRegister: (payload: {
+        email: string;
+        password: string;
+        consent: boolean;
+    }) => Promise<void>;
     goToLogin: () => void;
 }
 
-export default function RegisterPage({ busy, message, onRegister, goToLogin }: RegisterPageProps) {
-    const [formData, setFormData] = useState({ email: '', password: '', consent: false });
+export default function RegisterPage({
+    busy,
+    message,
+    onRegister,
+    goToLogin,
+}: RegisterPageProps) {
+    const [formData, setFormData] = useState({
+        email: '',
+        password: '',
+        consent: false,
+    });
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -24,12 +37,21 @@ export default function RegisterPage({ busy, message, onRegister, goToLogin }: R
     return (
         <section className="auth-screen">
             <div className="auth-visual">
-                <img src="images/auth-side.svg" alt="Kanban" className="auth-visual-image" />
+                <img
+                    src="images/auth-side.svg"
+                    alt="Kanban"
+                    className="auth-visual-image"
+                />
                 <div className="auth-visual-overlay">
-                    <span className="badge text-bg-light border mb-3">Kanban Workspace</span>
-                    <h1 className="display-6 fw-bold mb-3">Creez votre espace projet</h1>
+                    <span className="badge text-bg-light border mb-3">
+                        Kanban Workspace
+                    </span>
+                    <h1 className="display-6 fw-bold mb-3">
+                        Creez votre espace projet
+                    </h1>
                     <p className="mb-0">
-                        Inscrivez-vous pour gerer vos projets, vos equipes et vos taches au meme endroit.
+                        Inscrivez-vous pour gerer vos projets, vos equipes et
+                        vos taches au meme endroit.
                     </p>
                 </div>
             </div>
@@ -45,10 +67,17 @@ export default function RegisterPage({ busy, message, onRegister, goToLogin }: R
                         </div>
                     )}
 
-                    <div className="card auth-page-card auth-form-card" id="auth-card">
+                    <div
+                        className="card auth-page-card auth-form-card"
+                        id="auth-card"
+                    >
                         <div className="card-header">Creer un compte</div>
                         <div className="card-body">
-                            <form id="register-form" onSubmit={handleSubmit} className="mb-0">
+                            <form
+                                id="register-form"
+                                onSubmit={handleSubmit}
+                                className="mb-0"
+                            >
                                 <div className="mb-3">
                                     <label className="form-label">Email</label>
                                     <input
@@ -56,7 +85,10 @@ export default function RegisterPage({ busy, message, onRegister, goToLogin }: R
                                         className="form-control"
                                         value={formData.email}
                                         onChange={(e) =>
-                                            setFormData({ ...formData, email: e.target.value })
+                                            setFormData({
+                                                ...formData,
+                                                email: e.target.value,
+                                            })
                                         }
                                         required
                                         disabled={busy}
@@ -64,13 +96,18 @@ export default function RegisterPage({ busy, message, onRegister, goToLogin }: R
                                 </div>
 
                                 <div className="mb-3">
-                                    <label className="form-label">Mot de passe</label>
+                                    <label className="form-label">
+                                        Mot de passe
+                                    </label>
                                     <input
                                         type="password"
                                         className="form-control"
                                         value={formData.password}
                                         onChange={(e) =>
-                                            setFormData({ ...formData, password: e.target.value })
+                                            setFormData({
+                                                ...formData,
+                                                password: e.target.value,
+                                            })
                                         }
                                         required
                                         disabled={busy}
@@ -84,12 +121,18 @@ export default function RegisterPage({ busy, message, onRegister, goToLogin }: R
                                         id="consentCheck"
                                         checked={formData.consent}
                                         onChange={(e) =>
-                                            setFormData({ ...formData, consent: e.target.checked })
+                                            setFormData({
+                                                ...formData,
+                                                consent: e.target.checked,
+                                            })
                                         }
                                         required
                                         disabled={busy}
                                     />
-                                    <label className="form-check-label" htmlFor="consentCheck">
+                                    <label
+                                        className="form-check-label"
+                                        htmlFor="consentCheck"
+                                    >
                                         J'accepte le traitement de mes donnees
                                     </label>
                                 </div>
