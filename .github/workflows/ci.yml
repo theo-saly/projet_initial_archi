@@ -206,7 +206,10 @@ jobs:
               uses: docker/build-push-action@v6
               with:
                   context: .
-                  file: services/${{ matrix.service }}/Dockerfile
+                  file: services/Dockerfile
+                  build-args: |
+                      SERVICE=${{ matrix.service }}
+                      PORT=${{ matrix.service == 'auth-service' && '3001' || matrix.service == 'project-service' && '3002' || matrix.service == 'task-service' && '3003' || '3004' }}
                   platforms: linux/amd64,linux/arm64
                   push: false
                   tags: ${{ matrix.service }}:${{ github.sha }}
@@ -232,7 +235,9 @@ jobs:
         steps:
             - uses: actions/checkout@v4
             - name: Build image pour scan
-              run: docker build -t ${{ matrix.service }}:scan -f services/${{ matrix.service }}/Dockerfile .
+              run: |
+                  PORT=$([[ "${{ matrix.service }}" == "auth-service" ]] && echo 3001 || [[ "${{ matrix.service }}" == "project-service" ]] && echo 3002 || [[ "${{ matrix.service }}" == "task-service" ]] && echo 3003 || echo 3004)
+                  docker build -t ${{ matrix.service }}:scan -f services/Dockerfile --build-arg SERVICE=${{ matrix.service }} --build-arg PORT=$PORT .
             - name: Trivy scan
               uses: aquasecurity/trivy-action@v0.36.0
               with:

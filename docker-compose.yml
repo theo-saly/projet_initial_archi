@@ -21,7 +21,10 @@ services:
     auth-service:
         build:
             context: .
-            dockerfile: services/auth-service/Dockerfile
+            dockerfile: services/Dockerfile
+            args:
+                SERVICE: auth-service
+                PORT: 3001
         ports:
             - '3001:3001'
         volumes:
@@ -34,7 +37,10 @@ services:
     project-service:
         build:
             context: .
-            dockerfile: services/project-service/Dockerfile
+            dockerfile: services/Dockerfile
+            args:
+                SERVICE: project-service
+                PORT: 3002
         ports:
             - '3002:3002'
         volumes:
@@ -57,7 +63,10 @@ services:
     project-migrations:
         build:
             context: .
-            dockerfile: services/project-service/Dockerfile
+            dockerfile: services/Dockerfile
+            args:
+                SERVICE: project-service
+                PORT: 3002
         command: ['node', 'dist/migrations/cli.js', 'up']
         profiles:
             - production
@@ -75,7 +84,10 @@ services:
     task-service:
         build:
             context: .
-            dockerfile: services/task-service/Dockerfile
+            dockerfile: services/Dockerfile
+            args:
+                SERVICE: task-service
+                PORT: 3003
         ports:
             - '3003:3003'
         volumes:
@@ -97,7 +109,10 @@ services:
     task-migrations:
         build:
             context: .
-            dockerfile: services/task-service/Dockerfile
+            dockerfile: services/Dockerfile
+            args:
+                SERVICE: task-service
+                PORT: 3003
         command: ['node', 'dist/migrations/cli.js', 'up']
         profiles:
             - production
@@ -115,7 +130,10 @@ services:
     notification-service:
         build:
             context: .
-            dockerfile: services/notification-service/Dockerfile
+            dockerfile: services/Dockerfile
+            args:
+                SERVICE: notification-service
+                PORT: 3004
         ports:
             - '3004:3004'
         volumes:
