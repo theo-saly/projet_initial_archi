@@ -1,8 +1,30 @@
 services:
+    api-gateway:
+        build:
+            context: .
+            dockerfile: services/api-gateway/Dockerfile
+        ports:
+            - '3005:3005'
+        volumes:
+            - ./services/api-gateway/src:/app/src
+        environment:
+            - NODE_ENV=${NODE_ENV:-development}
+            - API_VERSION=${API_VERSION:-v1}
+            - AUTH_SERVICE_URL=http://auth-service:3001
+            - PROJECT_SERVICE_URL=http://project-service:3002
+            - TASK_SERVICE_URL=http://task-service:3003
+        depends_on:
+            - auth-service
+            - project-service
+            - task-service
+
     auth-service:
         build:
             context: .
-            dockerfile: services/auth-service/Dockerfile
+            dockerfile: services/Dockerfile
+            args:
+                SERVICE: auth-service
+                PORT: 3001
         ports:
             - '3001:3001'
         volumes:
@@ -15,13 +37,17 @@ services:
     project-service:
         build:
             context: .
-            dockerfile: services/project-service/Dockerfile
+            dockerfile: services/Dockerfile
+            args:
+                SERVICE: project-service
+                PORT: 3002
         ports:
             - '3002:3002'
         volumes:
             - ./services/project-service/src:/app/src
             - project-data:/app/data
         environment:
+            - NODE_ENV=${NODE_ENV:-development}
             - JWT_SECRET=${JWT_SECRET}
             - DB_TYPE=${DB_TYPE:-sqlite}
             - SQLITE_DB_LOCATION=/app/data/projects.db
@@ -34,16 +60,41 @@ services:
         depends_on:
             - redis
 
+    project-migrations:
+        build:
+            context: .
+            dockerfile: services/Dockerfile
+            args:
+                SERVICE: project-service
+                PORT: 3002
+        command: ['node', 'dist/migrations/cli.js', 'up']
+        profiles:
+            - production
+        volumes:
+            - project-data:/app/data
+        environment:
+            - NODE_ENV=production
+            - DB_TYPE=${DB_TYPE:-sqlite}
+            - SQLITE_DB_LOCATION=/app/data/projects.db
+            - MYSQL_HOST=mysql-projects
+            - MYSQL_USER=${MYSQL_USER}
+            - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+            - MYSQL_DB=projects
+
     task-service:
         build:
             context: .
-            dockerfile: services/task-service/Dockerfile
+            dockerfile: services/Dockerfile
+            args:
+                SERVICE: task-service
+                PORT: 3003
         ports:
             - '3003:3003'
         volumes:
             - ./services/task-service/src:/app/src
             - task-data:/app/data
         environment:
+            - NODE_ENV=${NODE_ENV:-development}
             - JWT_SECRET=${JWT_SECRET}
             - DB_TYPE=${DB_TYPE:-sqlite}
             - SQLITE_DB_LOCATION=/app/data/tasks.db
@@ -55,10 +106,34 @@ services:
         depends_on:
             - redis
 
+    task-migrations:
+        build:
+            context: .
+            dockerfile: services/Dockerfile
+            args:
+                SERVICE: task-service
+                PORT: 3003
+        command: ['node', 'dist/migrations/cli.js', 'up']
+        profiles:
+            - production
+        volumes:
+            - task-data:/app/data
+        environment:
+            - NODE_ENV=production
+            - DB_TYPE=${DB_TYPE:-sqlite}
+            - SQLITE_DB_LOCATION=/app/data/tasks.db
+            - MYSQL_HOST=mysql-tasks
+            - MYSQL_USER=${MYSQL_USER}
+            - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+            - MYSQL_DB=tasks
+
     notification-service:
         build:
             context: .
-            dockerfile: services/notification-service/Dockerfile
+            dockerfile: services/Dockerfile
+            args:
+                SERVICE: notification-service
+                PORT: 3004
         ports:
             - '3004:3004'
         volumes:

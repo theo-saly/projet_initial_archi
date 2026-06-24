@@ -1,33 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import {
-    normalizePath,
-    matchProjectPath,
-    buildHeaders,
-    parseApiResponse,
-} from '../utils/navigation';
-import LoginPage from '../pages/LoginPage';
-import RegisterPage from '../pages/RegisterPage';
-import DashboardPage from '../pages/DashboardPage';
-import ProjectPage from '../pages/ProjectPage';
-import type { Message } from '../types';
-
-export default function App() {
-    const [token, setToken] = useState<string>(
+function App() {
+    // JWT
+    const [token, setToken] = React.useState(
         () => localStorage.getItem('authToken') || '',
     );
-    const [path, setPath] = useState<string>(() =>
+    const [path, setPath] = React.useState(() =>
         normalizePath(window.location.pathname),
     );
-    const [message, setMessage] = useState<Message>({ type: '', text: '' });
-    const [busy, setBusy] = useState(false);
+    const [message, setMessage] = React.useState({ type: '', text: '' });
+    const [busy, setBusy] = React.useState(false);
 
-    const navigate = (newPath: string) => {
+    // nav
+    const navigate = (newPath) => {
         const normalized = normalizePath(newPath);
         if (normalized === path) return;
         window.history.pushState({}, '', normalized);
         setPath(normalized);
     };
 
+    // routes
     const projectIdFromPath = matchProjectPath(path);
     const isLoginPath = path === '/login';
     const isRegisterPath = path === '/register';
@@ -35,7 +25,9 @@ export default function App() {
     const isProjectListPath = path === '/projects';
     const isProjectFocusPath = !!projectIdFromPath;
 
-    useEffect(() => {
+    // EFFETS
+    // token localStorage
+    React.useEffect(() => {
         if (token) {
             localStorage.setItem('authToken', token);
         } else {
@@ -43,26 +35,36 @@ export default function App() {
         }
     }, [token]);
 
-    useEffect(() => {
-        const onPopState = () =>
+    // Écouter les changements de l'historique du navigateur
+    React.useEffect(() => {
+        const onPopState = () => {
             setPath(normalizePath(window.location.pathname));
+        };
         window.addEventListener('popstate', onPopState);
         return () => window.removeEventListener('popstate', onPopState);
     }, []);
 
-    useEffect(() => {
+    // accès et redirection
+    React.useEffect(() => {
+        // Si pas co mais sur une page protégée -> vers login
         if (!token && (isProjectListPath || isProjectFocusPath)) {
             navigate('/login');
             return;
         }
+
+        // Si connecté mais sur une page d'auth -> vers projets
         if (token && isAuthPath) {
             navigate('/projects');
             return;
         }
+
+        // si co -> vers projets
         if (path === '/') {
             navigate(token ? '/projects' : '/login');
             return;
         }
+
+        // default
         if (
             !isAuthPath &&
             !isProjectListPath &&
@@ -73,7 +75,8 @@ export default function App() {
         }
     }, [token, path]);
 
-    useEffect(() => {
+    // regle scroll pages auth
+    React.useEffect(() => {
         if (isAuthPath) {
             document.body.classList.add('auth-no-scroll');
         } else {
@@ -82,46 +85,52 @@ export default function App() {
         return () => document.body.classList.remove('auth-no-scroll');
     }, [isAuthPath]);
 
-    const pushMessage = (type: string, text: string) =>
+    // gestion messages
+    const pushMessage = (type, text) => {
         setMessage({ type, text });
-    const clearMessage = () => setMessage({ type: '', text: '' });
+    };
 
-    const login = async (credentials: { email: string; password: string }) => {
+    const clearMessage = () => {
+        setMessage({ type: '', text: '' });
+    };
+
+    // auth
+    const login = async (credentials) => {
         setBusy(true);
         clearMessage();
         try {
-            const response = await fetch('/api/auth/login', {
+            const response = await fetch(apiUrl('/auth/login'), {
                 method: 'POST',
                 headers: buildHeaders('', true),
                 body: JSON.stringify(credentials),
             });
-            const payload = await parseApiResponse<{ token: string }>(response);
-            if (!payload.token)
+
+            const payload = await parseApiResponse(response);
+            if (!payload.token) {
                 throw new Error('Token JWT manquant dans la reponse');
+            }
+
             setToken(payload.token);
             pushMessage('success', 'Connexion reussie.');
             navigate('/projects');
         } catch (err) {
-            pushMessage('danger', (err as Error).message);
+            pushMessage('danger', err.message);
             throw err;
         } finally {
             setBusy(false);
         }
     };
 
-    const register = async (payload: {
-        email: string;
-        password: string;
-        consent: boolean;
-    }) => {
+    const register = async (payload) => {
         setBusy(true);
         clearMessage();
         try {
-            const response = await fetch('/api/auth/register', {
+            const response = await fetch(apiUrl('/auth/register'), {
                 method: 'POST',
                 headers: buildHeaders('', true),
                 body: JSON.stringify(payload),
             });
+
             await parseApiResponse(response);
             pushMessage(
                 'success',
@@ -129,7 +138,7 @@ export default function App() {
             );
             navigate('/login');
         } catch (err) {
-            pushMessage('danger', (err as Error).message);
+            pushMessage('danger', err.message);
             throw err;
         } finally {
             setBusy(false);
@@ -146,11 +155,12 @@ export default function App() {
         setBusy(true);
         clearMessage();
         try {
-            const res = await fetch('/api/auth/profile', {
+            const res = await fetch(apiUrl('/auth/profile'), {
                 method: 'DELETE',
                 headers: buildHeaders(token, false),
             });
-            const data = await parseApiResponse<{ message?: string }>(res);
+
+            const data = await parseApiResponse(res);
             setToken('');
             pushMessage(
                 'success',
@@ -158,7 +168,7 @@ export default function App() {
             );
             navigate('/login');
         } catch (err) {
-            pushMessage('danger', (err as Error).message);
+            pushMessage('danger', err.message);
         } finally {
             setBusy(false);
         }
@@ -177,6 +187,7 @@ export default function App() {
                                 Par Saly Théo & Inacio Rodrigues
                             </small>
                         </div>
+
                         {token && (
                             <div className="d-flex gap-2 flex-wrap">
                                 <button
@@ -220,6 +231,7 @@ export default function App() {
                         }}
                     />
                 )}
+
                 {isRegisterPath && (
                     <RegisterPage
                         busy={busy}
@@ -231,6 +243,7 @@ export default function App() {
                         }}
                     />
                 )}
+
                 {!isAuthPath && message.text && (
                     <div
                         className={`alert alert-${message.type === 'danger' ? 'danger' : 'success'} mb-4 mt-3`}
@@ -239,6 +252,7 @@ export default function App() {
                         {message.text}
                     </div>
                 )}
+
                 {token && isProjectListPath && (
                     <DashboardPage
                         token={token}
@@ -248,6 +262,7 @@ export default function App() {
                         pushMessage={pushMessage}
                     />
                 )}
+
                 {token && isProjectFocusPath && (
                     <ProjectPage
                         token={token}

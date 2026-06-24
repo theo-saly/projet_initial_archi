@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { buildHeaders, getUserIdFromToken, parseApiResponse } from '../utils/navigation';
+import {
+    buildHeaders,
+    getUserIdFromToken,
+    parseApiResponse,
+} from '../utils/navigation';
 import type { Project, Message } from '../types';
 
 interface DashboardPageProps {
@@ -10,7 +14,13 @@ interface DashboardPageProps {
     pushMessage: (type: string, text: string) => void;
 }
 
-export default function DashboardPage({ token, navigate, busy, setBusy, pushMessage }: DashboardPageProps) {
+export default function DashboardPage({
+    token,
+    navigate,
+    busy,
+    setBusy,
+    pushMessage,
+}: DashboardPageProps) {
     const userId = getUserIdFromToken(token);
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
@@ -21,7 +31,7 @@ export default function DashboardPage({ token, navigate, busy, setBusy, pushMess
             setProjects([]);
             return [];
         }
-        const response = await fetch(`/api/projects?ownerId=${userId}`, {
+        const response = await fetch(apiUrl(`/projects?ownerId=${userId}`), {
             headers: buildHeaders(token, false),
         });
         const payload = await parseApiResponse<Project[] | unknown>(response);
@@ -45,7 +55,9 @@ export default function DashboardPage({ token, navigate, busy, setBusy, pushMess
             }
         };
         init();
-        return () => { mounted = false; };
+        return () => {
+            mounted = false;
+        };
     }, [loadProjects]);
 
     const createProject = async (event: React.FormEvent) => {
@@ -56,7 +68,7 @@ export default function DashboardPage({ token, navigate, busy, setBusy, pushMess
         }
         setBusy(true);
         try {
-            const response = await fetch('/api/projects', {
+            const response = await fetch(apiUrl('/projects'), {
                 method: 'POST',
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({
@@ -82,7 +94,7 @@ export default function DashboardPage({ token, navigate, busy, setBusy, pushMess
     const deleteProject = async (projectId: string) => {
         setBusy(true);
         try {
-            const response = await fetch(`/api/projects/${projectId}`, {
+            const response = await fetch(apiUrl(`/projects/${projectId}`), {
                 method: 'DELETE',
                 headers: buildHeaders(token, false),
             });
@@ -100,7 +112,7 @@ export default function DashboardPage({ token, navigate, busy, setBusy, pushMess
         const nextStatus = project.status === 'cloturé' ? 'ouvert' : 'cloturé';
         setBusy(true);
         try {
-            const response = await fetch(`/api/projects/${project.id}`, {
+            const response = await fetch(apiUrl(`/projects/${project.id}`), {
                 method: 'PUT',
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({
@@ -135,7 +147,9 @@ export default function DashboardPage({ token, navigate, busy, setBusy, pushMess
                             <input
                                 className="form-control"
                                 value={form.name}
-                                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                onChange={(e) =>
+                                    setForm({ ...form, name: e.target.value })
+                                }
                                 placeholder="Ex: Refonte espace client"
                                 required
                                 disabled={busy}
@@ -146,15 +160,26 @@ export default function DashboardPage({ token, navigate, busy, setBusy, pushMess
                             <input
                                 className="form-control"
                                 value={form.description}
-                                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                                onChange={(e) =>
+                                    setForm({
+                                        ...form,
+                                        description: e.target.value,
+                                    })
+                                }
                                 placeholder="Objectif du projet"
                                 required
                                 disabled={busy}
                             />
                         </div>
                         <div className="col-12 col-md-2 d-grid">
-                            <label className="form-label d-none d-md-block">&nbsp;</label>
-                            <button className="btn btn-primary" type="submit" disabled={busy}>
+                            <label className="form-label d-none d-md-block">
+                                &nbsp;
+                            </label>
+                            <button
+                                className="btn btn-primary"
+                                type="submit"
+                                disabled={busy}
+                            >
                                 Ajouter
                             </button>
                         </div>
@@ -166,7 +191,9 @@ export default function DashboardPage({ token, navigate, busy, setBusy, pushMess
                 <div className="card-header">Liste des projets</div>
                 <div className="card-body p-0">
                     {projects.length === 0 && (
-                        <div className="p-4 text-muted">Aucun projet pour le moment.</div>
+                        <div className="p-4 text-muted">
+                            Aucun projet pour le moment.
+                        </div>
                     )}
                     {projects.length > 0 && (
                         <div className="table-responsive">
@@ -182,8 +209,12 @@ export default function DashboardPage({ token, navigate, busy, setBusy, pushMess
                                 <tbody>
                                     {projects.map((project) => (
                                         <tr key={project.id}>
-                                            <td className="fw-semibold">{project.name}</td>
-                                            <td className="text-muted">{project.description}</td>
+                                            <td className="fw-semibold">
+                                                {project.name}
+                                            </td>
+                                            <td className="text-muted">
+                                                {project.description}
+                                            </td>
                                             <td>
                                                 <span
                                                     className={`badge ${project.status === 'cloturé' ? 'text-bg-success' : 'text-bg-secondary'}`}
@@ -196,7 +227,11 @@ export default function DashboardPage({ token, navigate, busy, setBusy, pushMess
                                                     <button
                                                         type="button"
                                                         className="btn btn-outline-primary btn-sm"
-                                                        onClick={() => navigate(`/projects/${project.id}`)}
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/projects/${project.id}`,
+                                                            )
+                                                        }
                                                         disabled={busy}
                                                     >
                                                         Ouvrir
@@ -204,15 +239,26 @@ export default function DashboardPage({ token, navigate, busy, setBusy, pushMess
                                                     <button
                                                         type="button"
                                                         className="btn btn-outline-secondary btn-sm"
-                                                        onClick={() => toggleProjectStatus(project)}
+                                                        onClick={() =>
+                                                            toggleProjectStatus(
+                                                                project,
+                                                            )
+                                                        }
                                                         disabled={busy}
                                                     >
-                                                        {project.status === 'cloturé' ? 'Reouvrir' : 'Cloturer'}
+                                                        {project.status ===
+                                                        'cloturé'
+                                                            ? 'Reouvrir'
+                                                            : 'Cloturer'}
                                                     </button>
                                                     <button
                                                         type="button"
                                                         className="btn btn-outline-danger btn-sm"
-                                                        onClick={() => deleteProject(project.id)}
+                                                        onClick={() =>
+                                                            deleteProject(
+                                                                project.id,
+                                                            )
+                                                        }
                                                         disabled={busy}
                                                     >
                                                         Supprimer

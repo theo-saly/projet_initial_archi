@@ -1,5 +1,6 @@
 import type { Task, TaskRepository } from './TaskRepository';
 import mysql from 'mysql2/promise';
+import { migrate } from '../migrations/runner';
 
 let pool: mysql.Pool;
 
@@ -10,6 +11,10 @@ function toMysqlDate(date: Date | string | null | undefined): string | null {
 }
 
 async function init(): Promise<void> {
+    if (process.env.NODE_ENV !== 'production') {
+        await migrate('up');
+    }
+
     pool = mysql.createPool({
         host: process.env.MYSQL_HOST,
         user: process.env.MYSQL_USER || 'root',
@@ -18,19 +23,6 @@ async function init(): Promise<void> {
         waitForConnections: true,
         connectionLimit: 5,
     });
-
-    await pool.execute(`
-        CREATE TABLE IF NOT EXISTS tasks (
-            id VARCHAR(36) PRIMARY KEY,
-            title VARCHAR(255),
-            description TEXT,
-            status VARCHAR(50),
-            echeance DATETIME,
-            projectId VARCHAR(36),
-            createdAt DATETIME,
-            updatedAt DATETIME
-        )
-    `);
 
     console.log(`Using MySQL database at ${process.env.MYSQL_HOST}`);
 }

@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { buildHeaders, getUserIdFromToken, parseApiResponse } from '../utils/navigation';
+import {
+    buildHeaders,
+    getUserIdFromToken,
+    parseApiResponse,
+} from '../utils/navigation';
 import TodoListCard from '../components/todo/TodoListCard';
 import type { Project, Task } from '../types';
 
@@ -12,12 +16,22 @@ interface ProjectPageProps {
     pushMessage: (type: string, text: string) => void;
 }
 
-export default function ProjectPage({ token, projectId, navigate, busy, setBusy, pushMessage }: ProjectPageProps) {
+export default function ProjectPage({
+    token,
+    projectId,
+    navigate,
+    busy,
+    setBusy,
+    pushMessage,
+}: ProjectPageProps) {
     const userId = getUserIdFromToken(token);
     const [project, setProject] = useState<Project | null>(null);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
-    const [projectForm, setProjectForm] = useState({ name: '', description: '' });
+    const [projectForm, setProjectForm] = useState({
+        name: '',
+        description: '',
+    });
 
     const loadProject = useCallback(async (): Promise<Project> => {
         const response = await fetch(`/api/projects/${projectId}`, {
@@ -33,7 +47,10 @@ export default function ProjectPage({ token, projectId, navigate, busy, setBusy,
         }
 
         setProject(payload);
-        setProjectForm({ name: payload.name || '', description: payload.description || '' });
+        setProjectForm({
+            name: payload.name || '',
+            description: payload.description || '',
+        });
         return payload;
     }, [token, projectId, userId]);
 
@@ -64,7 +81,9 @@ export default function ProjectPage({ token, projectId, navigate, busy, setBusy,
             }
         };
         init();
-        return () => { mounted = false; };
+        return () => {
+            mounted = false;
+        };
     }, [loadProject, loadTasks, pushMessage, navigate]);
 
     const saveProject = async (event: React.FormEvent) => {
@@ -77,7 +96,8 @@ export default function ProjectPage({ token, projectId, navigate, busy, setBusy,
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({
                     name: projectForm.name.trim() || project.name,
-                    description: projectForm.description.trim() || project.description,
+                    description:
+                        projectForm.description.trim() || project.description,
                     status: project.status,
                     echeance: project.echeance || new Date().toISOString(),
                 }),
@@ -116,7 +136,11 @@ export default function ProjectPage({ token, projectId, navigate, busy, setBusy,
         }
     };
 
-    const createTask = async (taskPayload: { title: string; description: string; status: string }) => {
+    const createTask = async (taskPayload: {
+        title: string;
+        description: string;
+        status: string;
+    }) => {
         const response = await fetch('/api/tasks', {
             method: 'POST',
             headers: buildHeaders(token, true),
@@ -160,7 +184,8 @@ export default function ProjectPage({ token, projectId, navigate, busy, setBusy,
     };
 
     if (loading) return <p className="text-muted">Chargement du projet...</p>;
-    if (!project) return <div className="alert alert-danger">Projet introuvable.</div>;
+    if (!project)
+        return <div className="alert alert-danger">Projet introuvable.</div>;
 
     return (
         <div className="page-project-focus d-grid gap-4">
@@ -176,13 +201,21 @@ export default function ProjectPage({ token, projectId, navigate, busy, setBusy,
                     </button>
                 </div>
                 <div className="card-body">
-                    <form onSubmit={saveProject} className="row g-3 align-items-end">
+                    <form
+                        onSubmit={saveProject}
+                        className="row g-3 align-items-end"
+                    >
                         <div className="col-12 col-md-4">
                             <label className="form-label">Nom</label>
                             <input
                                 className="form-control"
                                 value={projectForm.name}
-                                onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
+                                onChange={(e) =>
+                                    setProjectForm({
+                                        ...projectForm,
+                                        name: e.target.value,
+                                    })
+                                }
                                 required
                                 disabled={busy}
                             />
@@ -192,20 +225,31 @@ export default function ProjectPage({ token, projectId, navigate, busy, setBusy,
                             <input
                                 className="form-control"
                                 value={projectForm.description}
-                                onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
+                                onChange={(e) =>
+                                    setProjectForm({
+                                        ...projectForm,
+                                        description: e.target.value,
+                                    })
+                                }
                                 required
                                 disabled={busy}
                             />
                         </div>
                         <div className="col-12 col-md-3 d-grid">
-                            <button className="btn btn-primary" type="submit" disabled={busy}>
+                            <button
+                                className="btn btn-primary"
+                                type="submit"
+                                disabled={busy}
+                            >
                                 Enregistrer
                             </button>
                         </div>
                     </form>
 
                     <div className="d-flex flex-wrap gap-2 mt-3">
-                        <span className={`badge ${project.status === 'cloturé' ? 'text-bg-success' : 'text-bg-secondary'} fs-6`}>
+                        <span
+                            className={`badge ${project.status === 'cloturé' ? 'text-bg-success' : 'text-bg-secondary'} fs-6`}
+                        >
                             {project.status}
                         </span>
                         <button

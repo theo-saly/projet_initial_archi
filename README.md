@@ -13,41 +13,47 @@ Application de gestion de projet Kanban construite en **microservices** avec **N
 3. [API](#api)
 4. [Frontend](#frontend)
 5. [Persistance](#persistance)
-6. [Événements (Redis Streams)](#événements-redis-streams)
-7. [Lancement](#lancement)
-8. [Variables d'environnement](#variables-denvironnement)
-9. [Tests](#tests)
+6. [Migrations des bases de données](#migrations-des-bases-de-données)
+7. [Événements (Redis Streams)](#événements-redis-streams)
+8. [Lancement](#lancement)
+9. [Variables d'environnement](#variables-denvironnement)
+10. [Tests](#tests)
    - [Tests unitaires (Jest)](#tests-unitaires-jest)
    - [Tests d'architecture](#tests-darchitecture)
    - [Tests E2E (Playwright)](#tests-e2e-playwright)
-10. [Qualité de code](#qualité-de-code)
-11. [ADR](#adr)
-12. [Trello](#trello)
+11. [Qualité de code](#qualité-de-code)
+12. [ADR](#adr)
+13. [Trello](#trello)
 
 ---
 
 ## Architecture
 
 ```
-┌──────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│   Frontend   │────▶│  project-service │────▶│   task-service   │
-│  (Nginx)     │     │     :3002        │     │     :3003        │
-│   :3000      │     └────────┬─────────┘     └────────┬─────────┘
-│              │              │                        │
-│              │────▶┌────────┴─────────┐              │
-│              │     │   auth-service   │              │
-│              │     │     :3001        │     ┌────────▼─────────┐
-└──────────────┘     └──────────────────┘     │   Redis Streams  │
-                                              │     :6379        │
-                     ┌──────────────────┐     └────────┬─────────┘
-                     │notification-serv.│◀─────────────┘
-                     │     :3004        │  (écoute événements)
+┌──────────────┐     ┌──────────────────┐
+│   Frontend   │────▶│   api-gateway    │
+│  (Nginx)     │     │     :3005        │
+│   :3000      │     └──────┬─────┬─────┘
+└──────────────┘            │     │
+        │                   │     └──────────────┐
+        ▼                   ▼                    ▼
+┌──────────────┐     ┌──────────────────┐ ┌──────────────────┐
+│ auth-service │     │ project-service  │▶│   task-service   │
+│    :3001     │     │      :3002       │ │      :3003       │
+└──────────────┘     └────────┬─────────┘ └────────┬─────────┘
+                              │                    │
+                              │           ┌────────▼─────────┐
+                              │           │   Redis Streams  │
+                              │           │      :6379       │
+                     ┌────────▼─────────┐ └────────┬─────────┘
+                     │notification-serv.│◀─────────┘
+                     │      :3004       │  (écoute événements)
                      └──────────────────┘
 ```
 
 ### Communication inter-services
 
-- **Synchrone (REST)** : le frontend appelle les services via le reverse-proxy Nginx ; le project-service appelle le task-service pour vérifier l'état des tâches avant clôture d'un projet.
+- **Synchrone (REST)** : le frontend appelle l'API Gateway via Nginx (`/api/v1/...`) ; la gateway relaie vers les microservices en conservant le préfixe versionné (`/v1/...`). Le project-service appelle aussi le task-service pour vérifier l'état des tâches avant clôture d'un projet.
 - **Asynchrone (Redis Streams)** : le task-service et le project-service publient des événements, le notification-service les consomme et les écrit dans un fichier de log.
 
 ---
@@ -57,6 +63,7 @@ Application de gestion de projet Kanban construite en **microservices** avec **N
 | Service | Port | Rôle | Base de données |
 |---------|------|------|-----------------|
 | **auth-service** | 3001 | Inscription, login JWT, suppression de compte | In-memory |
+| **api-gateway** | 3005 | Point d'entrée versionné `/v1`, routage vers les microservices, OpenAPI en développement | — |
 | **project-service** | 3002 | CRUD projets, clôture avec vérification des tâches | SQLite |
 | **task-service** | 3003 | CRUD tâches, publication d'événements Redis | SQLite |
 | **notification-service** | 3004 | Écoute événements Redis, écriture log, envoi e-mail SMTP | Fichier de log |
@@ -69,23 +76,34 @@ Application de gestion de projet Kanban construite en **microservices** avec **N
 
 ## API
 
+L'API publique passe par l'API Gateway :
+
+| URL | Description |
+|-----|-------------|
+| `http://localhost:3005/v1/...` | Point d'entrée direct de la gateway |
+| `http://localhost:3000/api/v1/...` | Point d'entrée utilisé par le frontend via Nginx |
+| `http://localhost:3005/openapi.json` | Spécification OpenAPI en développement |
+| `http://localhost:3005/docs` | Documentation Swagger UI en développement |
+
+Les microservices conservent aussi leurs routes historiques non versionnées pour compatibilité locale, mais exposent désormais les mêmes endpoints avec `/v1`.
+
 ### Auth Service (`:3001`)
 
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| POST | `/auth/register` | Inscription (email, password, consent RGPD) |
-| POST | `/auth/login` | Connexion — retourne un JWT |
-| DELETE | `/auth/profile` | Suppression de compte (droit à l'oubli) |
+| POST | `/v1/auth/register` | Inscription (email, password, consent RGPD) |
+| POST | `/v1/auth/login` | Connexion — retourne un JWT |
+| DELETE | `/v1/auth/profile` | Suppression de compte (droit à l'oubli) |
 
 ### Project Service (`:3002`)
 
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/projects` | Liste les projets de l'utilisateur |
-| GET | `/projects/:id` | Détail d'un projet |
-| POST | `/projects` | Crée un projet |
-| PUT | `/projects/:id` | Met à jour / clôture / réouvre un projet |
-| DELETE | `/projects/:id` | Supprime un projet |
+| GET | `/v1/projects` | Liste les projets de l'utilisateur |
+| GET | `/v1/projects/:id` | Détail d'un projet |
+| POST | `/v1/projects` | Crée un projet |
+| PUT | `/v1/projects/:id` | Met à jour / clôture / réouvre un projet |
+| DELETE | `/v1/projects/:id` | Supprime un projet |
 
 > La clôture (`status: "cloturé"`) vérifie en REST synchrone que **toutes** les tâches du projet sont terminées. Si ce n'est pas le cas, la requête est rejetée (400).
 
@@ -93,11 +111,11 @@ Application de gestion de projet Kanban construite en **microservices** avec **N
 
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/tasks` | Liste toutes les tâches |
-| GET | `/tasks/by-project?projectId=xxx` | Tâches d'un projet donné |
-| POST | `/tasks` | Crée une tâche |
-| PUT | `/tasks/:id` | Met à jour une tâche (status : `à faire` / `en cours` / `terminé`) |
-| DELETE | `/tasks/:id` | Supprime une tâche |
+| GET | `/v1/tasks` | Liste toutes les tâches |
+| GET | `/v1/tasks/by-project?projectId=xxx` | Tâches d'un projet donné |
+| POST | `/v1/tasks` | Crée une tâche |
+| PUT | `/v1/tasks/:id` | Met à jour une tâche (status : `à faire` / `en cours` / `terminé`) |
+| DELETE | `/v1/tasks/:id` | Supprime une tâche |
 
 ### Notification Service (`:3004`)
 
@@ -121,15 +139,15 @@ Application de gestion de projet Kanban construite en **microservices** avec **N
 
 ### Proxy Nginx
 
-Le fichier `frontend/nginx.conf` route les appels API :
+Le fichier `frontend/nginx.conf` route les appels API vers l'API Gateway :
 
 | Pattern URL | Service cible |
 |-------------|---------------|
-| `/api/projects*` | `http://project-service:3002` |
-| `/api/tasks*` | `http://task-service:3003` |
-| `/api/auth/*` | `http://auth-service:3001` |
+| `/api/*` | `http://api-gateway:3005` |
+| `/docs` | `http://api-gateway:3005/docs` |
+| `/openapi.json` | `http://api-gateway:3005/openapi.json` |
 
-Le préfixe `/api` est retiré avant le forward (`rewrite ^/api(/.*)$ $1 break`).
+Le préfixe `/api` est retiré avant le forward (`rewrite ^/api(/.*)$ $1 break`) : `/api/v1/tasks` devient `/v1/tasks` côté gateway.
 
 ---
 
@@ -149,6 +167,70 @@ La sélection se fait automatiquement dans `persistence/index.ts` :
 if (process.env.NODE_ENV === 'test') repository = inmemoryRepo;
 else if (process.env.DB_TYPE === 'mysql') repository = mysqlRepo;
 else repository = sqliteRepo;
+```
+
+---
+
+## Migrations des bases de données
+
+Les migrations sont versionnees dans les services qui possedent une base de donnees :
+
+| Service | Dossier migrations | Base cible |
+|---------|--------------------|------------|
+| `project-service` | `services/project-service/src/migrations` | `projects` |
+| `task-service` | `services/task-service/src/migrations` | `tasks` |
+
+### En developpement
+
+En developpement, les migrations sont lancees automatiquement au demarrage des microservices (`NODE_ENV != production`).
+
+```bash
+docker compose up --build
+```
+
+Elles peuvent aussi etre lancees manuellement :
+
+```bash
+npm run migrate:up
+```
+
+### En production
+
+En production, les migrations sont lancees par des conteneurs dedies afin de separer l'evolution du schema du demarrage applicatif :
+
+```bash
+NODE_ENV=production docker compose --profile production run --rm project-migrations
+NODE_ENV=production docker compose --profile production run --rm task-migrations
+```
+
+Les services applicatifs ne lancent pas les migrations quand `NODE_ENV=production`.
+
+### Rollback sans perte de donnees
+
+Chaque migration possede une direction `up` et une direction `down`.
+
+- Les nouvelles colonnes ajoutent une valeur par defaut (`priority = normal` pour les taches, `visibility = private` pour les projets).
+- Les rollbacks reconstruisent la table sans la colonne retiree et recopient les donnees conservees.
+- Les migrations de creation de table n'ont pas de rollback destructif afin d'eviter une suppression accidentelle des donnees.
+
+Rollback de la derniere migration :
+
+```bash
+npm run migrate:down
+```
+
+### Tests de migration et integration
+
+Les tests de migration creent des bases SQLite temporaires, executent les migrations, verifient les valeurs par defaut puis executent un rollback en validant que les lignes existantes restent presentes.
+
+```bash
+npm run test:integration
+```
+
+La suite globale execute aussi ces tests :
+
+```bash
+npm test
 ```
 
 ---
@@ -455,7 +537,11 @@ docker compose logs notification-service
 
 ## ADR
 
-Nos ADR se trouve sur le trello
+Les decisions d'architecture sont documentees dans le dossier [`docs/adr`](docs/adr).
+
+- [ADR 0001 - Versioning des API, API Gateway et OpenAPI](docs/adr/0001-versioning-api-gateway-openapi.md)
+- [ADR 0002 - Migrations des bases de donnees](docs/adr/0002-migrations-bases-de-donnees.md)
+
 ---
 
 ## Trello
