@@ -537,10 +537,7 @@ docker compose logs notification-service
 
 ## ADR
 
-Les decisions d'architecture sont documentees dans le dossier [`docs/adr`](docs/adr).
-
-- [ADR 0001 - Versioning des API, API Gateway et OpenAPI](docs/adr/0001-versioning-api-gateway-openapi.md)
-- [ADR 0002 - Migrations des bases de donnees](docs/adr/0002-migrations-bases-de-donnees.md)
+Les decisions d'architecture sont documentees sur le Trello. 
 
 ---
 
