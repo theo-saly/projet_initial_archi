@@ -1,6 +1,8 @@
 services:
     auth-service:
-        build: ./services/auth-service
+        build:
+            context: .
+            dockerfile: services/auth-service/Dockerfile
         ports:
             - '3001:3001'
         volumes:
@@ -11,7 +13,9 @@ services:
             - SQLITE_DB_LOCATION=/app/data/auth.db
 
     project-service:
-        build: ./services/project-service
+        build:
+            context: .
+            dockerfile: services/project-service/Dockerfile
         ports:
             - '3002:3002'
         volumes:
@@ -31,7 +35,9 @@ services:
             - redis
 
     task-service:
-        build: ./services/task-service
+        build:
+            context: .
+            dockerfile: services/task-service/Dockerfile
         ports:
             - '3003:3003'
         volumes:
@@ -50,7 +56,9 @@ services:
             - redis
 
     notification-service:
-        build: ./services/notification-service
+        build:
+            context: .
+            dockerfile: services/notification-service/Dockerfile
         ports:
             - '3004:3004'
         volumes:

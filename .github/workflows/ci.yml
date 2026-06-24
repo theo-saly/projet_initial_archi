@@ -69,7 +69,7 @@ jobs:
               if: steps.check.outputs.changed == 'true'
               env:
                   JEST_JUNIT_OUTPUT_FILE: junit-${{ matrix.service }}.xml
-              run: npx jest --projects services/${{ matrix.service }} --coverage --reporters=default --reporters=jest-junit
+              run: npx jest --testPathPatterns="services/${{ matrix.service }}" --coverage --reporters=default --reporters=jest-junit
 
             - name: Publier résultats tests
               uses: dorny/test-reporter@v1
