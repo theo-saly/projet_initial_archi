@@ -236,8 +236,16 @@ jobs:
             - uses: actions/checkout@v4
             - name: Build image pour scan
               run: |
-                  PORT=$([[ "${{ matrix.service }}" == "auth-service" ]] && echo 3001 || [[ "${{ matrix.service }}" == "project-service" ]] && echo 3002 || [[ "${{ matrix.service }}" == "task-service" ]] && echo 3003 || echo 3004)
-                  docker build -t ${{ matrix.service }}:scan -f services/Dockerfile --build-arg SERVICE=${{ matrix.service }} --build-arg PORT=$PORT .
+                  case "${{ matrix.service }}" in
+                    auth-service) PORT=3001 ;;
+                    project-service) PORT=3002 ;;
+                    task-service) PORT=3003 ;;
+                    *) PORT=3004 ;;
+                  esac
+                  docker build -t ${{ matrix.service }}:scan \
+                    -f services/Dockerfile \
+                    --build-arg SERVICE=${{ matrix.service }} \
+                    --build-arg PORT=$PORT .
             - name: Trivy scan
               uses: aquasecurity/trivy-action@v0.36.0
               with:
@@ -246,8 +254,8 @@ jobs:
                   output: 'trivy-${{ matrix.service }}.sarif'
                   severity: 'CRITICAL,HIGH'
             - name: Upload résultats Trivy vers GitHub Security
-              uses: github/codeql-action/upload-sarif@v3
-              if: always()
+              uses: github/codeql-action/upload-sarif@v4
+              if: always() && hashFiles(format('trivy-{0}.sarif', matrix.service)) != ''
               with:
                   sarif_file: 'trivy-${{ matrix.service }}.sarif'
                   category: 'trivy-${{ matrix.service }}'
