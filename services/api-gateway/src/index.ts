@@ -80,7 +80,7 @@ app.use(`/${apiVersion}/:resource/*`, async (req: Request, res: Response) => {
         .map((segment) => encodeURIComponent(segment))
         .join('/');
     const targetUrl = new URL(
-        `/${resource}${safeTail ? `/${safeTail}` : ''}`,
+        `/${serviceName}${safeTail ? `/${safeTail}` : ''}`,
         upstreamBase,
     );
     const query = new URLSearchParams(
