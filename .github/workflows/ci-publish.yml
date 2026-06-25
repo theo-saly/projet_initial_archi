@@ -250,28 +250,25 @@ jobs:
                     echo "$service → :latest publié"
                   done
 
-    # ─── Job 4 : Déploiement en production ───────────────────────────────────
-    # Requiert les secrets dans Settings → Environments → production :
-    #   DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_PATH
-    deploy-prod:
+    # ─── Job 4 : Déploiement sur le serveur d'intégration Azure ────────────
+    deploy-integration:
         needs: finalize
         runs-on: ubuntu-latest
-        environment: production
         steps:
-            - name: Déployer en production via SSH
+            - name: Déployer sur le serveur d'intégration
               uses: appleboy/ssh-action@v1.2.0
               with:
-                  host: ${{ secrets.DEPLOY_HOST }}
-                  username: ${{ secrets.DEPLOY_USER }}
-                  key: ${{ secrets.DEPLOY_SSH_KEY }}
+                  host: ${{ secrets.VM_HOST_INT }}
+                  username: ${{ secrets.VM_USER_INT }}
+                  key: ${{ secrets.SSH_PRIVATE_KEY_INT }}
                   script: |
                       set -e
-                      cd ${{ secrets.DEPLOY_PATH }}
+                      cd ~/app
 
                       REGISTRY="ghcr.io/${{ github.repository_owner }}/projet_initial_archi"
                       SERVICES=("auth-service" "project-service" "task-service" "notification-service")
 
-                      echo "=== 1. Sauvegarde des images actuelles (rollback point) ==="
+                      echo "=== [INT] 1. Sauvegarde des images actuelles ==="
                       declare -A PREV_IMAGES
                       for service in "${SERVICES[@]}"; do
                         PREV=$(docker inspect --format='{{.Image}}' "$service" 2>/dev/null || echo "")
@@ -279,16 +276,16 @@ jobs:
                         echo "$service → ${PREV:-aucune image précédente}"
                       done
 
-                      echo "=== 2. Migrations de base de données ==="
+                      echo "=== [INT] 2. Migrations de base de données ==="
                       docker compose --profile production up \
                         project-migrations task-migrations \
                         --no-deps --wait
 
-                      echo "=== 3. Redémarrage progressif des services ==="
+                      echo "=== [INT] 3. Redémarrage progressif des services ==="
                       ROLLBACK_NEEDED=false
 
                       for service in "${SERVICES[@]}"; do
-                        echo "--- Déploiement de $service ---"
+                        echo "--- $service ---"
                         docker pull "$REGISTRY/$service:latest"
                         docker compose up -d --no-deps --pull never "$service"
 
@@ -296,14 +293,13 @@ jobs:
                         for i in $(seq 1 20); do
                           STATUS=$(docker inspect --format='{{.State.Health.Status}}' "$service" 2>/dev/null || echo "none")
                           if [ "$STATUS" = "healthy" ] || [ "$STATUS" = "none" ]; then
-                            HEALTHY=true
-                            break
+                            HEALTHY=true; break
                           fi
                           sleep 3
                         done
 
                         if [ "$HEALTHY" = "false" ]; then
-                          echo "ÉCHEC : $service unhealthy → rollback"
+                          echo "ÉCHEC : $service → rollback"
                           ROLLBACK_NEEDED=true
                           PREV="${PREV_IMAGES[$service]}"
                           if [ -n "$PREV" ]; then
@@ -312,13 +308,78 @@ jobs:
                           fi
                           break
                         fi
-
                         echo "$service OK"
                       done
 
                       if [ "$ROLLBACK_NEEDED" = "true" ]; then
-                        echo "=== ROLLBACK effectué ==="
-                        exit 1
+                        echo "=== ROLLBACK INT effectué ===" && exit 1
                       fi
+                      echo "=== Déploiement INT terminé ==="
 
-                      echo "=== Déploiement terminé avec succès ==="
+    # ─── Job 5 : Déploiement sur le serveur de production Azure ─────────────
+    # Ne se lance que si le déploiement d'intégration a réussi.
+    deploy-prod:
+        needs: deploy-integration
+        runs-on: ubuntu-latest
+        environment: production
+        steps:
+            - name: Déployer sur le serveur de production
+              uses: appleboy/ssh-action@v1.2.0
+              with:
+                  host: ${{ secrets.VM_HOST_PROD }}
+                  username: ${{ secrets.VM_USER_PROD }}
+                  key: ${{ secrets.SSH_PRIVATE_KEY_PROD }}
+                  script: |
+                      set -e
+                      cd ~/app
+
+                      REGISTRY="ghcr.io/${{ github.repository_owner }}/projet_initial_archi"
+                      SERVICES=("auth-service" "project-service" "task-service" "notification-service")
+
+                      echo "=== [PROD] 1. Sauvegarde des images actuelles ==="
+                      declare -A PREV_IMAGES
+                      for service in "${SERVICES[@]}"; do
+                        PREV=$(docker inspect --format='{{.Image}}' "$service" 2>/dev/null || echo "")
+                        PREV_IMAGES[$service]="$PREV"
+                        echo "$service → ${PREV:-aucune image précédente}"
+                      done
+
+                      echo "=== [PROD] 2. Migrations de base de données ==="
+                      docker compose --profile production up \
+                        project-migrations task-migrations \
+                        --no-deps --wait
+
+                      echo "=== [PROD] 3. Redémarrage progressif des services ==="
+                      ROLLBACK_NEEDED=false
+
+                      for service in "${SERVICES[@]}"; do
+                        echo "--- $service ---"
+                        docker pull "$REGISTRY/$service:latest"
+                        docker compose up -d --no-deps --pull never "$service"
+
+                        HEALTHY=false
+                        for i in $(seq 1 20); do
+                          STATUS=$(docker inspect --format='{{.State.Health.Status}}' "$service" 2>/dev/null || echo "none")
+                          if [ "$STATUS" = "healthy" ] || [ "$STATUS" = "none" ]; then
+                            HEALTHY=true; break
+                          fi
+                          sleep 3
+                        done
+
+                        if [ "$HEALTHY" = "false" ]; then
+                          echo "ÉCHEC : $service → rollback"
+                          ROLLBACK_NEEDED=true
+                          PREV="${PREV_IMAGES[$service]}"
+                          if [ -n "$PREV" ]; then
+                            docker tag "$PREV" "$REGISTRY/$service:rollback"
+                            docker compose up -d --no-deps "$service"
+                          fi
+                          break
+                        fi
+                        echo "$service OK"
+                      done
+
+                      if [ "$ROLLBACK_NEEDED" = "true" ]; then
+                        echo "=== ROLLBACK PROD effectué ===" && exit 1
+                      fi
+                      echo "=== Déploiement PROD terminé ==="
