@@ -254,6 +254,7 @@ jobs:
     deploy-integration:
         needs: finalize
         runs-on: ubuntu-latest
+        permissions: {}
         steps:
             - name: Déployer sur le serveur d'intégration
               uses: appleboy/ssh-action@v1.2.0
@@ -322,6 +323,7 @@ jobs:
         needs: deploy-integration
         runs-on: ubuntu-latest
         environment: production
+        permissions: {}
         steps:
             - name: Déployer sur le serveur de production
               uses: appleboy/ssh-action@v1.2.0
