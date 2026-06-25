@@ -92,6 +92,72 @@ jobs:
                   name: coverage-${{ matrix.service }}
                   path: services/${{ matrix.service }}/coverage/
 
+    # ─── Tests d'intégration (services démarrés via Docker Compose) ───────────
+    # Sur une PR, on construit les images depuis le code de la branche courante
+    # et on démarre tous les services ensemble pour tester leur compatibilité réelle.
+    # Ce job remplace les tests unitaires isolés par des appels HTTP bout-en-bout.
+    integration-tests:
+        needs: [detect-changes, tests]
+        runs-on: ubuntu-latest
+        # Ne s'exécute que si au moins un service backend a changé
+        if: |
+            needs.detect-changes.outputs.auth == 'true' ||
+            needs.detect-changes.outputs.project == 'true' ||
+            needs.detect-changes.outputs.task == 'true' ||
+            needs.detect-changes.outputs.notification == 'true'
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: 'npm'
+
+            - run: npm ci
+
+            - name: Créer le fichier .env pour les tests
+              run: |
+                  echo "JWT_SECRET=ci-integration-secret" > .env
+                  echo "DB_TYPE=sqlite" >> .env
+                  echo "NODE_ENV=test" >> .env
+
+            - name: Construire les images depuis le code de la branche
+              run: |
+                  docker compose build \
+                    auth-service project-service task-service notification-service
+
+            - name: Démarrer les services
+              run: |
+                  docker compose up -d \
+                    auth-service project-service task-service notification-service redis
+
+            - name: Attendre que les services répondent
+              # Boucle sur chaque port jusqu'à ce qu'il accepte les connexions.
+              # curl -sf retourne 0 si le serveur répond (même avec 4xx/5xx).
+              run: |
+                  for PORT in 3001 3002 3003 3004; do
+                    echo "Attente du service sur le port $PORT..."
+                    for i in $(seq 1 30); do
+                      if curl -sf "http://localhost:$PORT/" > /dev/null 2>&1; then
+                        echo "Port $PORT prêt"
+                        break
+                      fi
+                      sleep 3
+                    done
+                  done
+
+            - name: Lancer les tests d'intégration
+              run: npm run test:integration
+
+            - name: Afficher les logs des services en cas d'échec
+              if: failure()
+              run: docker compose logs
+
+            - name: Arrêter les services
+              if: always()
+              # -v supprime aussi les volumes temporaires créés pour ce run
+              run: docker compose down -v
+
     # ─── ESLint (par service) ───
     lint:
         needs: detect-changes
