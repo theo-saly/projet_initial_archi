@@ -81,13 +81,19 @@ for (const service of SERVICES) {
     const compatPath = path.join(serviceDir, 'compatibility.json');
 
     if (!fs.existsSync(pkgPath)) {
-        console.warn(`[WARN] ${service}: package.json introuvable, service ignoré`);
+        console.warn(
+            `[WARN] ${service}: package.json introuvable, service ignoré`,
+        );
         continue;
     }
 
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as { version: string };
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as {
+        version: string;
+    };
     const compat: CompatibilityManifest = fs.existsSync(compatPath)
-        ? (JSON.parse(fs.readFileSync(compatPath, 'utf8')) as CompatibilityManifest)
+        ? (JSON.parse(
+              fs.readFileSync(compatPath, 'utf8'),
+          ) as CompatibilityManifest)
         : { provides: {}, requires: {} };
 
     services[service] = {
@@ -107,7 +113,9 @@ for (const [service, info] of Object.entries(services)) {
 
     for (const [dep, constraint] of reqs) {
         if (!services[dep]) {
-            console.error(`[ERREUR] ${service} requiert "${dep}" mais ce service n'existe pas`);
+            console.error(
+                `[ERREUR] ${service} requiert "${dep}" mais ce service n'existe pas`,
+            );
             allPassed = false;
             continue;
         }
@@ -115,7 +123,9 @@ for (const [service, info] of Object.entries(services)) {
         const depVersion = services[dep].version;
 
         if (satisfies(depVersion, constraint)) {
-            console.log(`[OK]   ${service} requiert ${dep}@${constraint} → v${depVersion}`);
+            console.log(
+                `[OK]   ${service} requiert ${dep}@${constraint} → v${depVersion}`,
+            );
         } else {
             console.error(
                 `[FAIL] ${service} requiert ${dep}@${constraint} → v${depVersion} INCOMPATIBLE`,
@@ -128,7 +138,9 @@ for (const [service, info] of Object.entries(services)) {
 // ─── Résultat ─────────────────────────────────────────────────────────────────
 
 if (!allPassed) {
-    console.error('\n✗ Compatibility check ÉCHOUÉ — corrige les versions avant de déployer');
+    console.error(
+        '\n✗ Compatibility check ÉCHOUÉ — corrige les versions avant de déployer',
+    );
     process.exit(1);
 }
 

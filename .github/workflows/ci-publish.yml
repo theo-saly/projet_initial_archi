@@ -4,8 +4,7 @@ on:
     push:
         branches: [main]
 
-jobs:
-    # ─── Job 1 : Incrémenter la version des services modifiés ───────────────
+jobs:    # ─── Job 1 : Incrémenter la version des services modifiés ───────────────
     # Ce job détecte quels services ont changé depuis le commit précédent.
     # Pour chaque service modifié, il bump le patch (1.0.0 → 1.0.1) dans
     # package.json via "npm version patch", puis commite le tout.
