@@ -256,6 +256,17 @@ jobs:
         runs-on: ubuntu-latest
         permissions: {}
         steps:
+            - uses: actions/checkout@v4
+
+            - name: Envoyer docker-compose.prod.yml sur le serveur d'intégration
+              uses: appleboy/scp-action@v0.1.7
+              with:
+                  host: ${{ secrets.VM_HOST_INT }}
+                  username: ${{ secrets.VM_USER_INT }}
+                  key: ${{ secrets.SSH_PRIVATE_KEY_INT }}
+                  source: docker-compose.prod.yml
+                  target: ~/app/
+
             - name: Déployer sur le serveur d'intégration
               uses: appleboy/ssh-action@v1.2.0
               with:
@@ -278,7 +289,10 @@ jobs:
                       done
 
                       echo "=== [INT] 2. Migrations de base de données ==="
-                      docker compose --profile production up \
+                      REGISTRY_OWNER="${{ github.repository_owner }}"
+                      export REGISTRY_OWNER
+
+                      docker compose -f docker-compose.prod.yml --profile production up \
                         project-migrations task-migrations \
                         --no-deps --wait
 
@@ -288,7 +302,7 @@ jobs:
                       for service in "${SERVICES[@]}"; do
                         echo "--- $service ---"
                         docker pull "$REGISTRY/$service:latest"
-                        docker compose up -d --no-deps --pull never "$service"
+                        docker compose -f docker-compose.prod.yml up -d --no-deps --pull never "$service"
 
                         HEALTHY=false
                         for i in $(seq 1 20); do
@@ -305,7 +319,7 @@ jobs:
                           PREV="${PREV_IMAGES[$service]}"
                           if [ -n "$PREV" ]; then
                             docker tag "$PREV" "$REGISTRY/$service:rollback"
-                            docker compose up -d --no-deps "$service"
+                            docker compose -f docker-compose.prod.yml up -d --no-deps "$service"
                           fi
                           break
                         fi
@@ -317,14 +331,41 @@ jobs:
                       fi
                       echo "=== Déploiement INT terminé ==="
 
-    # ─── Job 5 : Déploiement sur le serveur de production Azure ─────────────
-    # Ne se lance que si le déploiement d'intégration a réussi.
-    deploy-prod:
+    # ─── Job 5 : Manual Gate — validation humaine sur l'environnement INT ──
+    # Ce job ne fait rien sur le serveur. Il sert uniquement de point d'arrêt.
+    # GitHub met le pipeline en pause ici et envoie une notification aux reviewers.
+    # Un reviewer se connecte sur le serveur d'intégration, vérifie que tout fonctionne,
+    # puis clique "Approve" sur GitHub pour autoriser le déploiement en production.
+    #
+    # Configurer dans Settings → Environments → integration → Required reviewers.
+    validate-integration:
         needs: deploy-integration
+        runs-on: ubuntu-latest
+        environment: integration
+        permissions: {}
+        steps:
+            - name: Intégration validée — déploiement en production autorisé
+              run: echo "Version validée sur l'environnement d'intégration."
+
+    # ─── Job 6 : Déploiement sur le serveur de production Azure ─────────────
+    # Se lance automatiquement après approbation du Manual Gate (job 5).
+    deploy-prod:
+        needs: validate-integration
         runs-on: ubuntu-latest
         environment: production
         permissions: {}
         steps:
+            - uses: actions/checkout@v4
+
+            - name: Envoyer docker-compose.prod.yml sur le serveur de production
+              uses: appleboy/scp-action@v0.1.7
+              with:
+                  host: ${{ secrets.VM_HOST_PROD }}
+                  username: ${{ secrets.VM_USER_PROD }}
+                  key: ${{ secrets.SSH_PRIVATE_KEY_PROD }}
+                  source: docker-compose.prod.yml
+                  target: ~/app/
+
             - name: Déployer sur le serveur de production
               uses: appleboy/ssh-action@v1.2.0
               with:
@@ -374,7 +415,7 @@ jobs:
                           PREV="${PREV_IMAGES[$service]}"
                           if [ -n "$PREV" ]; then
                             docker tag "$PREV" "$REGISTRY/$service:rollback"
-                            docker compose up -d --no-deps "$service"
+                            docker compose -f docker-compose.prod.yml up -d --no-deps "$service"
                           fi
                           break
                         fi
