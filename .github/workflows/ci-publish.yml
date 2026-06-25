@@ -5,74 +5,11 @@ on:
         branches: [main]
 
 jobs:
-    # ─── Job 1 : Incrémenter les versions des services modifiés ─────────────
-    # Détecte les services touchés depuis le commit précédent.
-    # Bumpe le patch (1.0.0 → 1.0.1) dans package.json et commite.
-    # Le [skip ci] empêche une boucle infinie : GitHub Actions ignore
-    # les workflows déclenchés par ce commit automatique.
-    bump-versions:
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
-        outputs:
-            # SHA du commit post-bump (ou SHA original si aucun bump)
-            # Tous les jobs suivants checkoutent CE commit pour avoir les bonnes versions.
-            sha: ${{ steps.export-sha.outputs.sha }}
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 2 # HEAD~1 nécessaire pour git diff
-
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 20
-
-            - name: Configurer Git pour le commit automatique
-              run: |
-                  git config user.name "github-actions[bot]"
-                  git config user.email "github-actions[bot]@users.noreply.github.com"
-
-            - name: Bump patch version des services modifiés
-              id: bump
-              run: |
-                  SERVICES=("auth-service" "project-service" "task-service" "notification-service" "api-gateway")
-                  HAS_CHANGES=false
-
-                  for service in "${SERVICES[@]}"; do
-                    # On exclut package.json et compatibility.json pour ne pas re-bumper
-                    # un commit de bump ou de mise à jour de manifeste précédent.
-                    CHANGED=$(git diff --name-only HEAD~1 HEAD -- "services/$service/" \
-                      | grep -v "package.json" \
-                      | grep -v "compatibility.json" \
-                      || true)
-
-                    if [ -n "$CHANGED" ]; then
-                      echo "→ $service modifié, bump du patch"
-                      npm version patch --no-git-tag-version \
-                        --workspace "services/$service"
-                      HAS_CHANGES=true
-                    fi
-                  done
-
-                  echo "has_changes=$HAS_CHANGES" >> "$GITHUB_OUTPUT"
-
-            - name: Commiter et pousser les bumps
-              if: steps.bump.outputs.has_changes == 'true'
-              run: |
-                  git add services/*/package.json
-                  git commit -m "chore: bump service versions [skip ci]"
-                  git push
-
-            - name: Exporter le SHA à utiliser pour les jobs suivants
-              id: export-sha
-              run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-    # ─── Job 2 : Build des images avec tags :sha et :vX.Y.Z ─────────────────
-    # On construit depuis le code post-bump pour que le LABEL version soit correct.
-    # On pousse avec le tag sha (pour les tests d'intégration) et vX.Y.Z.
-    # Le tag :latest n'est PAS encore poussé — il ne le sera qu'après les tests.
+    # ─── Job 1 : Build des images avec version anticipée ────────────────────
+    # On calcule la prochaine version (PATCH+1) SANS encore commiter le bump.
+    # L'image est buildée avec cette version future dans son LABEL.
+    # Le commit réel n'a lieu qu'en job 3, après validation des tests.
     build-images:
-        needs: bump-versions
         runs-on: ubuntu-latest
         permissions:
             contents: read
@@ -92,7 +29,11 @@ jobs:
         steps:
             - uses: actions/checkout@v4
               with:
-                  ref: ${{ needs.bump-versions.outputs.sha }}
+                  fetch-depth: 2
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
 
             - name: Setup QEMU
               uses: docker/setup-qemu-action@v3
@@ -107,16 +48,29 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Lire version et manifeste de compatibilité
+            - name: Calculer la prochaine version et lire le manifeste
               id: compat
               run: |
                   SERVICE=${{ matrix.service }}
                   COMPAT="services/$SERVICE/compatibility.json"
 
-                  VERSION=$(node -p "require('./services/$SERVICE/package.json').version")
-                  echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-                  echo "major=$(echo "$VERSION" | cut -d. -f1)" >> "$GITHUB_OUTPUT"
-                  echo "minor=$(echo "$VERSION" | cut -d. -f1-2)" >> "$GITHUB_OUTPUT"
+                  CURRENT=$(node -p "require('./services/$SERVICE/package.json').version")
+
+                  # Vérifier si ce service a des changements réels (hors fichiers de config)
+                  CHANGED=$(git diff --name-only HEAD~1 HEAD -- "services/$SERVICE/" \
+                    | grep -v "package.json" | grep -v "compatibility.json" || true)
+
+                  if [ -n "$CHANGED" ]; then
+                    # Calculer PATCH+1 sans modifier package.json
+                    IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+                    NEXT="$MAJOR.$MINOR.$((PATCH + 1))"
+                  else
+                    NEXT="$CURRENT"
+                  fi
+
+                  echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+                  echo "major=$(echo "$NEXT" | cut -d. -f1)" >> "$GITHUB_OUTPUT"
+                  echo "minor=$(echo "$NEXT" | cut -d. -f1-2)" >> "$GITHUB_OUTPUT"
 
                   echo "provides_api=$(node -p "require('./$COMPAT').provides['api-version'] || 'v1'")" \
                     >> "$GITHUB_OUTPUT"
@@ -145,27 +99,25 @@ jobs:
                       REQUIRES_NOTIFICATION_SERVICE=${{ steps.compat.outputs.req_notification }}
                   platforms: linux/amd64,linux/arm64
                   push: true
-                  # :latest absent volontairement — ajouté seulement si les tests passent (job 4)
+                  # :latest absent volontairement — ajouté en job 3 seulement si tests OK
                   tags: |
-                      ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:${{ needs.bump-versions.outputs.sha }}
+                      ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:${{ github.sha }}
                       ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:${{ steps.compat.outputs.version }}
                       ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:${{ steps.compat.outputs.major }}
                       ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:${{ steps.compat.outputs.minor }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
-    # ─── Job 3 : Tests d'intégration sur la combinaison complète ────────────
+    # ─── Job 2 : Tests d'intégration sur la combinaison complète ────────────
     # Tous les services démarrent avec les images sha fraîchement buildées.
-    # Si un seul service est incompatible avec les autres → job rouge → pas de :latest.
+    # Si un seul service est incompatible → job rouge → pas de bump, pas de :latest.
     integration-tests:
-        needs: [bump-versions, build-images]
+        needs: build-images
         runs-on: ubuntu-latest
         permissions:
             packages: read
         steps:
             - uses: actions/checkout@v4
-              with:
-                  ref: ${{ needs.bump-versions.outputs.sha }}
 
             - uses: actions/setup-node@v4
               with:
@@ -183,23 +135,22 @@ jobs:
 
             - name: Démarrer la stack complète avec les images du sha courant
               env:
-                  IMAGE_TAG: ${{ needs.bump-versions.outputs.sha }}
+                  IMAGE_TAG: ${{ github.sha }}
                   REGISTRY_OWNER: ${{ github.repository_owner }}
                   JWT_SECRET: ci-integration-secret
               run: docker compose -f docker-compose.ci.yml up -d
 
-            - name: Attendre que tous les services soient healthy
+            - name: Attendre que tous les services soient joignables
               run: |
-                  echo "Attente des healthchecks..."
                   for i in $(seq 1 40); do
-                    ALL_HEALTHY=true
+                    ALL_OK=true
                     for PORT in 3001 3002 3003; do
                       if ! curl -sf "http://localhost:$PORT/" > /dev/null 2>&1; then
-                        ALL_HEALTHY=false
+                        ALL_OK=false
                       fi
                     done
-                    if [ "$ALL_HEALTHY" = "true" ]; then
-                      echo "Tous les services sont prêts"
+                    if [ "$ALL_OK" = "true" ]; then
+                      echo "Services prêts"
                       break
                     fi
                     sleep 3
@@ -214,36 +165,37 @@ jobs:
             - name: Logs des services en cas d'échec
               if: failure()
               env:
-                  IMAGE_TAG: ${{ needs.bump-versions.outputs.sha }}
+                  IMAGE_TAG: ${{ github.sha }}
                   REGISTRY_OWNER: ${{ github.repository_owner }}
               run: docker compose -f docker-compose.ci.yml logs
 
             - name: Arrêter la stack
               if: always()
               env:
-                  IMAGE_TAG: ${{ needs.bump-versions.outputs.sha }}
+                  IMAGE_TAG: ${{ github.sha }}
                   REGISTRY_OWNER: ${{ github.repository_owner }}
               run: docker compose -f docker-compose.ci.yml down -v
 
-    # ─── Job 4 : Promouvoir les images vers :latest ───────────────────────────
-    # Les tests d'intégration ont validé la combinaison → on peut publier :latest.
-    # On utilise imagetools create qui recrée les tags sans re-télécharger l'image.
-    push-latest:
-        needs: [bump-versions, integration-tests]
+    # ─── Job 3 : Bump versions + push :latest (seulement si tests OK) ───────
+    # Ce job ne s'exécute QUE si les tests d'intégration ont réussi.
+    # C'est ici que la version est réellement commitée dans package.json,
+    # et que :latest est publié sur le registre.
+    finalize:
+        needs: [build-images, integration-tests]
         runs-on: ubuntu-latest
         permissions:
+            contents: write
             packages: write
-        strategy:
-            fail-fast: false
-            matrix:
-                service:
-                    [
-                        auth-service,
-                        project-service,
-                        task-service,
-                        notification-service,
-                    ]
         steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 2
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+
             - name: Setup Docker Buildx
               uses: docker/setup-buildx-action@v3
 
@@ -254,34 +206,58 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Promouvoir l'image sha vers :latest
-              # imagetools create crée un alias sans re-builder ni re-télécharger
+            - name: Configurer Git
               run: |
-                  docker buildx imagetools create \
-                    --tag ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:latest \
-                    ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:${{ needs.bump-versions.outputs.sha }}
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
 
-    # ─── Job 5 : Déploiement en production ───────────────────────────────────
-    # Requiert les secrets GitHub :
-    #   DEPLOY_HOST     : IP ou hostname du serveur
-    #   DEPLOY_USER     : utilisateur SSH
-    #   DEPLOY_SSH_KEY  : clé privée SSH (Ed25519 recommandée)
-    #   DEPLOY_PATH     : chemin du projet sur le serveur (ex: /opt/app)
-    #
-    # Séquence sur le serveur :
-    #   1. Sauvegarder les images actuelles (point de rollback)
-    #   2. Exécuter les migrations de BDD
-    #   3. Redémarrer les services un par un
-    #   4. Health check après chaque service → rollback si échec
+            - name: Bumper les versions des services modifiés
+              id: bump
+              run: |
+                  SERVICES=("auth-service" "project-service" "task-service" "notification-service" "api-gateway")
+                  HAS_CHANGES=false
+
+                  for service in "${SERVICES[@]}"; do
+                    CHANGED=$(git diff --name-only HEAD~1 HEAD -- "services/$service/" \
+                      | grep -v "package.json" | grep -v "compatibility.json" || true)
+
+                    if [ -n "$CHANGED" ]; then
+                      echo "→ Bump $service"
+                      npm version patch --no-git-tag-version \
+                        --workspace "services/$service"
+                      HAS_CHANGES=true
+                    fi
+                  done
+
+                  echo "has_changes=$HAS_CHANGES" >> "$GITHUB_OUTPUT"
+
+            - name: Commiter le bump de version
+              if: steps.bump.outputs.has_changes == 'true'
+              run: |
+                  git add services/*/package.json
+                  git commit -m "chore: bump service versions [skip ci]"
+                  git push
+
+            - name: Promouvoir les images :sha vers :latest
+              # Les images sha sont validées par les tests → on peut les publier.
+              # imagetools create recrée le tag sans re-télécharger l'image.
+              run: |
+                  REGISTRY="ghcr.io/${{ github.repository_owner }}/projet_initial_archi"
+                  for service in auth-service project-service task-service notification-service; do
+                    docker buildx imagetools create \
+                      --tag "$REGISTRY/$service:latest" \
+                      "$REGISTRY/$service:${{ github.sha }}"
+                    echo "$service → :latest publié"
+                  done
+
+    # ─── Job 4 : Déploiement en production ───────────────────────────────────
+    # Requiert les secrets dans Settings → Environments → production :
+    #   DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_PATH
     deploy-prod:
-        needs: push-latest
+        needs: finalize
         runs-on: ubuntu-latest
         environment: production
         steps:
-            - uses: actions/checkout@v4
-              with:
-                  ref: ${{ needs.bump-versions.outputs.sha }}
-
             - name: Déployer en production via SSH
               uses: appleboy/ssh-action@v1.2.0
               with:
@@ -300,33 +276,26 @@ jobs:
                       for service in "${SERVICES[@]}"; do
                         PREV=$(docker inspect --format='{{.Image}}' "$service" 2>/dev/null || echo "")
                         PREV_IMAGES[$service]="$PREV"
-                        echo "$service → $PREV"
+                        echo "$service → ${PREV:-aucune image précédente}"
                       done
 
                       echo "=== 2. Migrations de base de données ==="
-                      # Les migrations s'exécutent dans des conteneurs éphémères
-                      # et se terminent avant le démarrage des services applicatifs.
                       docker compose --profile production up \
                         project-migrations task-migrations \
-                        --no-deps --exit-code-from project-migrations || \
-                      docker compose --profile production up \
-                        project-migrations task-migrations --no-deps
+                        --no-deps --wait
 
                       echo "=== 3. Redémarrage progressif des services ==="
                       ROLLBACK_NEEDED=false
 
                       for service in "${SERVICES[@]}"; do
                         echo "--- Déploiement de $service ---"
-
                         docker pull "$REGISTRY/$service:latest"
                         docker compose up -d --no-deps --pull never "$service"
 
-                        # Attendre jusqu'à 60 secondes que le service soit healthy
                         HEALTHY=false
                         for i in $(seq 1 20); do
                           STATUS=$(docker inspect --format='{{.State.Health.Status}}' "$service" 2>/dev/null || echo "none")
                           if [ "$STATUS" = "healthy" ] || [ "$STATUS" = "none" ]; then
-                            # "none" = pas de healthcheck défini → on suppose OK
                             HEALTHY=true
                             break
                           fi
@@ -334,10 +303,8 @@ jobs:
                         done
 
                         if [ "$HEALTHY" = "false" ]; then
-                          echo "ÉCHEC : $service n'est pas healthy → rollback"
+                          echo "ÉCHEC : $service unhealthy → rollback"
                           ROLLBACK_NEEDED=true
-
-                          # Restaurer l'image précédente pour ce service
                           PREV="${PREV_IMAGES[$service]}"
                           if [ -n "$PREV" ]; then
                             docker tag "$PREV" "$REGISTRY/$service:rollback"
@@ -346,11 +313,11 @@ jobs:
                           break
                         fi
 
-                        echo "$service déployé avec succès"
+                        echo "$service OK"
                       done
 
                       if [ "$ROLLBACK_NEEDED" = "true" ]; then
-                        echo "=== ROLLBACK effectué — déploiement en échec ==="
+                        echo "=== ROLLBACK effectué ==="
                         exit 1
                       fi
 
