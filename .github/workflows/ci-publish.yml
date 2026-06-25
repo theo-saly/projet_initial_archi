@@ -5,7 +5,106 @@ on:
         branches: [main]
 
 jobs:
+    # ─── Job 1 : Incrémenter la version des services modifiés ───────────────
+    # Ce job détecte quels services ont changé depuis le commit précédent.
+    # Pour chaque service modifié, il bump le patch (1.0.0 → 1.0.1) dans
+    # package.json via "npm version patch", puis commite le tout.
+    # Le [skip ci] dans le message de commit empêche une boucle infinie :
+    # GitHub Actions ignore les workflows déclenchés par ce commit-là.
+    bump-versions:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write # Nécessaire pour git push depuis Actions
+        outputs:
+            # On expose le SHA du nouveau commit (après bump) pour que
+            # les jobs suivants checkoutent la bonne version du code.
+            sha: ${{ steps.push.outputs.sha }}
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 2 # On a besoin de HEAD~1 pour le git diff
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+
+            - name: Configurer Git pour le commit automatique
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+
+            - name: Bump patch version des services modifiés
+              id: bump
+              run: |
+                  SERVICES=("auth-service" "project-service" "task-service" "notification-service" "api-gateway")
+                  HAS_CHANGES=false
+
+                  for service in "${SERVICES[@]}"; do
+                    # git diff liste les fichiers modifiés entre le commit courant et le précédent.
+                    # On exclut package.json pour éviter de re-bumper un commit de bump précédent.
+                    CHANGED=$(git diff --name-only HEAD~1 HEAD -- "services/$service/" \
+                      | grep -v "package.json" \
+                      | grep -v "compatibility.json" \
+                      || true)
+
+                    if [ -n "$CHANGED" ]; then
+                      echo "→ $service a changé, bump du patch..."
+                      # --no-git-tag-version : modifie package.json SANS créer de tag git
+                      # On gère nous-mêmes le commit pour grouper tous les bumps ensemble
+                      npm version patch --no-git-tag-version \
+                        --workspace "services/$service"
+                      HAS_CHANGES=true
+                    fi
+                  done
+
+                  echo "has_changes=$HAS_CHANGES" >> "$GITHUB_OUTPUT"
+
+            - name: Commiter et pousser les bumps de version
+              id: push
+              if: steps.bump.outputs.has_changes == 'true'
+              run: |
+                  git add services/*/package.json
+                  git commit -m "chore: bump service versions [skip ci]"
+                  git push
+                  # On expose le SHA du nouveau commit pour les jobs suivants
+                  echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+            - name: Aucun changement détecté
+              if: steps.bump.outputs.has_changes != 'true'
+              run: |
+                  echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+                  echo "Aucun service modifié, pas de bump nécessaire."
+
+    # ─── Job 2 : Vérifier la compatibilité entre services ───────────────────
+    # On checkout le code APRÈS le bump (ref = SHA du commit de bump s'il existe,
+    # sinon le SHA d'origine). On exécute le script check-compatibility.js.
+    # Si une contrainte est violée, ce job échoue et le job publish ne se lance pas.
+    check-compatibility:
+        needs: bump-versions
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  # Utilise le SHA post-bump si disponible, sinon le SHA original
+                  ref: ${{ needs.bump-versions.outputs.sha || github.sha }}
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+
+            - name: Vérifier la compatibilité entre services
+              run: npx ts-node scripts/check-compatibility.ts
+
+    # ─── Job 3 : Build et push des images Docker avec labels ────────────────
+    # Ce job tourne en parallèle pour les 4 services (matrix).
+    # Il lit le compatibility.json de chaque service pour extraire :
+    #   - la version à tagger
+    #   - la version d'API fournie (provides.api-version)
+    #   - les contraintes vers les autres services (requires.*)
+    # Ces valeurs sont passées comme --build-arg au docker build, qui les
+    # injecte dans les LABEL du Dockerfile via les ARG déclarés.
     publish:
+        needs: [bump-versions, check-compatibility]
         runs-on: ubuntu-latest
         permissions:
             contents: read
@@ -22,6 +121,8 @@ jobs:
                     ]
         steps:
             - uses: actions/checkout@v4
+              with:
+                  ref: ${{ needs.bump-versions.outputs.sha || github.sha }}
 
             - name: Setup QEMU
               uses: docker/setup-qemu-action@v3
@@ -36,25 +137,65 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Extract version from package.json
-              id: version
+            - name: Lire version et manifeste de compatibilité
+              id: compat
               run: |
-                  VERSION=$(node -p "require('./services/${{ matrix.service }}/package.json').version")
+                  SERVICE=${{ matrix.service }}
+                  COMPAT="services/$SERVICE/compatibility.json"
+
+                  # Version depuis package.json (déjà bumpée si le service a changé)
+                  VERSION=$(node -p "require('./services/$SERVICE/package.json').version")
                   echo "version=$VERSION" >> "$GITHUB_OUTPUT"
                   echo "major=$(echo "$VERSION" | cut -d. -f1)" >> "$GITHUB_OUTPUT"
                   echo "minor=$(echo "$VERSION" | cut -d. -f1-2)" >> "$GITHUB_OUTPUT"
 
+                  # Ce que ce service expose (api-version)
+                  echo "provides_api=$(node -p "require('./$COMPAT').provides['api-version'] || 'v1'")" \
+                    >> "$GITHUB_OUTPUT"
+
+                  # Ce que ce service requiert des autres (vide si pas de dépendance)
+                  echo "req_auth=$(node -p "require('./$COMPAT').requires['auth-service'] || ''")" \
+                    >> "$GITHUB_OUTPUT"
+                  echo "req_project=$(node -p "require('./$COMPAT').requires['project-service'] || ''")" \
+                    >> "$GITHUB_OUTPUT"
+                  echo "req_task=$(node -p "require('./$COMPAT').requires['task-service'] || ''")" \
+                    >> "$GITHUB_OUTPUT"
+                  echo "req_notification=$(node -p "require('./$COMPAT').requires['notification-service'] || ''")" \
+                    >> "$GITHUB_OUTPUT"
+
+            - name: Déterminer le port du service
+              id: port
+              run: |
+                  case "${{ matrix.service }}" in
+                    auth-service)         echo "port=3001" >> "$GITHUB_OUTPUT" ;;
+                    project-service)      echo "port=3002" >> "$GITHUB_OUTPUT" ;;
+                    task-service)         echo "port=3003" >> "$GITHUB_OUTPUT" ;;
+                    notification-service) echo "port=3004" >> "$GITHUB_OUTPUT" ;;
+                  esac
+
             - name: Build et push ${{ matrix.service }}
               uses: docker/build-push-action@v6
               with:
-                  context: ./services/${{ matrix.service }}
+                  # context = racine du repo pour que le Dockerfile partagé
+                  # puisse accéder à services/${SERVICE}/
+                  context: .
+                  file: services/Dockerfile
+                  build-args: |
+                      SERVICE=${{ matrix.service }}
+                      PORT=${{ steps.port.outputs.port }}
+                      VERSION=${{ steps.compat.outputs.version }}
+                      PROVIDES_API_VERSION=${{ steps.compat.outputs.provides_api }}
+                      REQUIRES_AUTH_SERVICE=${{ steps.compat.outputs.req_auth }}
+                      REQUIRES_PROJECT_SERVICE=${{ steps.compat.outputs.req_project }}
+                      REQUIRES_TASK_SERVICE=${{ steps.compat.outputs.req_task }}
+                      REQUIRES_NOTIFICATION_SERVICE=${{ steps.compat.outputs.req_notification }}
                   platforms: linux/amd64,linux/arm64
                   push: true
                   tags: |
                       ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:latest
                       ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:${{ github.sha }}
-                      ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:${{ steps.version.outputs.major }}
-                      ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:${{ steps.version.outputs.minor }}
-                      ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:${{ steps.version.outputs.version }}
+                      ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:${{ steps.compat.outputs.major }}
+                      ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:${{ steps.compat.outputs.minor }}
+                      ghcr.io/${{ github.repository_owner }}/projet_initial_archi/${{ matrix.service }}:${{ steps.compat.outputs.version }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
