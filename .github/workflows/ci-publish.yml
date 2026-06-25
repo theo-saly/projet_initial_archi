@@ -317,10 +317,26 @@ jobs:
                       fi
                       echo "=== Déploiement INT terminé ==="
 
-    # ─── Job 5 : Déploiement sur le serveur de production Azure ─────────────
-    # Ne se lance que si le déploiement d'intégration a réussi.
-    deploy-prod:
+    # ─── Job 5 : Manual Gate — validation humaine sur l'environnement INT ──
+    # Ce job ne fait rien sur le serveur. Il sert uniquement de point d'arrêt.
+    # GitHub met le pipeline en pause ici et envoie une notification aux reviewers.
+    # Un reviewer se connecte sur le serveur d'intégration, vérifie que tout fonctionne,
+    # puis clique "Approve" sur GitHub pour autoriser le déploiement en production.
+    #
+    # Configurer dans Settings → Environments → integration → Required reviewers.
+    validate-integration:
         needs: deploy-integration
+        runs-on: ubuntu-latest
+        environment: integration
+        permissions: {}
+        steps:
+            - name: Intégration validée — déploiement en production autorisé
+              run: echo "Version validée sur l'environnement d'intégration."
+
+    # ─── Job 6 : Déploiement sur le serveur de production Azure ─────────────
+    # Se lance automatiquement après approbation du Manual Gate (job 5).
+    deploy-prod:
+        needs: validate-integration
         runs-on: ubuntu-latest
         environment: production
         permissions: {}
