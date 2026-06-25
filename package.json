@@ -6,7 +6,7 @@
   "scripts": {
     "prettify": "prettier -l --write \"**/*.{js,ts}\"",
     "test": "jest",
-    "test:integration": "npm test --workspace services/project-service && npm test --workspace services/task-service",
+    "test:integration": "npx jest --testPathPattern='services/(project-service|task-service)'",
     "migrate:up": "npm run migrate:up --workspace services/project-service && npm run migrate:up --workspace services/task-service",
     "migrate:down": "npm run migrate:down --workspace services/task-service && npm run migrate:down --workspace services/project-service",
     "dev": "nodemon -L --exec ts-node src/index.ts",
