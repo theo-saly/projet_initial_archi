@@ -92,6 +92,112 @@ jobs:
                   name: coverage-${{ matrix.service }}
                   path: services/${{ matrix.service }}/coverage/
 
+    # ─── Tests d'intégration (services démarrés via Docker Compose) ───────────
+    # Sur une PR, on construit les images depuis le code de la branche courante
+    # et on démarre tous les services ensemble pour tester leur compatibilité réelle.
+    # Ce job remplace les tests unitaires isolés par des appels HTTP bout-en-bout.
+    integration-tests:
+        needs: [detect-changes, tests]
+        runs-on: ubuntu-latest
+        # Ne s'exécute que si au moins un service backend a changé
+        if: |
+            needs.detect-changes.outputs.auth == 'true' ||
+            needs.detect-changes.outputs.project == 'true' ||
+            needs.detect-changes.outputs.task == 'true' ||
+            needs.detect-changes.outputs.notification == 'true'
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: 'npm'
+
+            - run: npm ci
+
+            - name: Login GHCR pour puller les images stables
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Préparer les images (stable pour non-modifiés, buildée pour modifiés)
+              # Pour chaque service :
+              #   - non modifié → pull :latest depuis GHCR (image stable validée)
+              #   - modifié     → build depuis la branche et retag en :latest local
+              # Résultat : docker-compose.ci.yml avec IMAGE_TAG=latest utilise
+              # les bonnes images pour chaque service.
+              env:
+                  REGISTRY: ghcr.io/${{ github.repository_owner }}/projet_initial_archi
+              run: |
+                  declare -A CHANGED
+                  CHANGED["auth-service"]="${{ needs.detect-changes.outputs.auth }}"
+                  CHANGED["project-service"]="${{ needs.detect-changes.outputs.project }}"
+                  CHANGED["task-service"]="${{ needs.detect-changes.outputs.task }}"
+                  CHANGED["notification-service"]="${{ needs.detect-changes.outputs.notification }}"
+
+                  declare -A PORTS
+                  PORTS["auth-service"]="3001"
+                  PORTS["project-service"]="3002"
+                  PORTS["task-service"]="3003"
+                  PORTS["notification-service"]="3004"
+
+                  for service in "${!CHANGED[@]}"; do
+                    if [ "${CHANGED[$service]}" = "true" ]; then
+                      echo "→ $service modifié : build depuis la branche"
+                      docker build -f services/Dockerfile \
+                        --build-arg SERVICE="$service" \
+                        --build-arg PORT="${PORTS[$service]}" \
+                        -t "$REGISTRY/$service:latest" .
+                    else
+                      echo "→ $service non modifié : pull image stable"
+                      # || true : si aucune image stable n'existe encore, on build quand même
+                      docker pull "$REGISTRY/$service:latest" || \
+                        docker build -f services/Dockerfile \
+                          --build-arg SERVICE="$service" \
+                          --build-arg PORT="${PORTS[$service]}" \
+                          -t "$REGISTRY/$service:latest" .
+                    fi
+                  done
+
+            - name: Démarrer la stack avec les images préparées
+              env:
+                  IMAGE_TAG: latest
+                  REGISTRY_OWNER: ${{ github.repository_owner }}
+                  JWT_SECRET: ci-integration-secret
+              run: docker compose -f docker-compose.ci.yml up -d
+
+            - name: Attendre que les services répondent
+              run: |
+                  for PORT in 3001 3002 3003; do
+                    echo "Attente du port $PORT..."
+                    for i in $(seq 1 30); do
+                      if curl -sf "http://localhost:$PORT/" > /dev/null 2>&1; then
+                        echo "Port $PORT prêt"
+                        break
+                      fi
+                      sleep 3
+                    done
+                  done
+
+            - name: Lancer les tests d'intégration
+              run: npm run test:integration
+
+            - name: Afficher les logs des services en cas d'échec
+              if: failure()
+              env:
+                  IMAGE_TAG: latest
+                  REGISTRY_OWNER: ${{ github.repository_owner }}
+              run: docker compose -f docker-compose.ci.yml logs
+
+            - name: Arrêter les services
+              if: always()
+              env:
+                  IMAGE_TAG: latest
+                  REGISTRY_OWNER: ${{ github.repository_owner }}
+              run: docker compose -f docker-compose.ci.yml down -v
+
     # ─── ESLint (par service) ───
     lint:
         needs: detect-changes
