@@ -59,7 +59,7 @@ if (isDevelopment) {
     });
 }
 
-app.use(`/${apiVersion}/:resource/*`, async (req: Request, res: Response) => {
+app.use(`/${apiVersion}/:resource/*path`, async (req: Request, res: Response) => {
     const resource = String(req.params.resource);
     const serviceName = serviceByResource[resource];
 
@@ -70,7 +70,7 @@ app.use(`/${apiVersion}/:resource/*`, async (req: Request, res: Response) => {
     }
 
     const upstreamBase = new URL(serviceUrls[serviceName]);
-    const rawTail = String(req.params[0] ?? '');
+    const rawTail = String(req.params['path'] ?? '');
     const safeTail = rawTail
         .split('/')
         .filter(
