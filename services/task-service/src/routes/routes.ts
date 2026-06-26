@@ -4,10 +4,15 @@ import addTask from '../controllers/addTask';
 import updateTask from '../controllers/updateTask';
 import deleteTask from '../controllers/deleteTask';
 
+const registerTaskRoutes = (app, prefix = '') => {
+    app.get(`${prefix}/tasks`, getTasks);
+    app.get(`${prefix}/tasks/by-project`, getTasksByProject);
+    app.post(`${prefix}/tasks`, addTask);
+    app.put(`${prefix}/tasks/:id`, updateTask);
+    app.delete(`${prefix}/tasks/:id`, deleteTask);
+};
+
 export default (app) => {
-    app.get('/tasks', getTasks);
-    app.get('/tasks/by-project', getTasksByProject);
-    app.post('/tasks', addTask);
-    app.put('/tasks/:id', updateTask);
-    app.delete('/tasks/:id', deleteTask);
+    registerTaskRoutes(app);
+    registerTaskRoutes(app, '/v1');
 };
