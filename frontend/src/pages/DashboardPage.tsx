@@ -31,7 +31,7 @@ export default function DashboardPage({
             setProjects([]);
             return [];
         }
-        const response = await fetch(`/api/projects?ownerId=${userId}`, {
+        const response = await fetch(`/api/v1/projects?ownerId=${userId}`, {
             headers: buildHeaders(token, false),
         });
         const payload = await parseApiResponse<Project[] | unknown>(response);
@@ -68,7 +68,7 @@ export default function DashboardPage({
         }
         setBusy(true);
         try {
-            const response = await fetch('/api/projects', {
+            const response = await fetch('/api/v1/projects', {
                 method: 'POST',
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({
@@ -94,7 +94,7 @@ export default function DashboardPage({
     const deleteProject = async (projectId: string) => {
         setBusy(true);
         try {
-            const response = await fetch(`/api/projects/${projectId}`, {
+            const response = await fetch(`/api/v1/projects/${projectId}`, {
                 method: 'DELETE',
                 headers: buildHeaders(token, false),
             });
@@ -112,7 +112,7 @@ export default function DashboardPage({
         const nextStatus = project.status === 'cloturé' ? 'ouvert' : 'cloturé';
         setBusy(true);
         try {
-            const response = await fetch(`/api/projects/${project.id}`, {
+            const response = await fetch(`/api/v1/projects/${project.id}`, {
                 method: 'PUT',
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({

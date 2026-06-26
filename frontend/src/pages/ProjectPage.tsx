@@ -34,7 +34,7 @@ export default function ProjectPage({
     });
 
     const loadProject = useCallback(async (): Promise<Project> => {
-        const response = await fetch(`/api/projects/${projectId}`, {
+        const response = await fetch(`/api/v1/projects/${projectId}`, {
             headers: buildHeaders(token, false),
         });
         const payload = await parseApiResponse<Project>(response);
@@ -56,7 +56,7 @@ export default function ProjectPage({
 
     const loadTasks = useCallback(async (): Promise<Task[]> => {
         const response = await fetch(
-            `/api/tasks/by-project?projectId=${encodeURIComponent(projectId)}`,
+            `/api/v1/tasks/by-project?projectId=${encodeURIComponent(projectId)}`,
             { headers: buildHeaders(token, false) },
         );
         const payload = await parseApiResponse<Task[] | unknown>(response);
@@ -91,7 +91,7 @@ export default function ProjectPage({
         if (!project) return;
         setBusy(true);
         try {
-            const response = await fetch(`/api/projects/${projectId}`, {
+            const response = await fetch(`/api/v1/projects/${projectId}`, {
                 method: 'PUT',
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({
@@ -116,7 +116,7 @@ export default function ProjectPage({
         if (!project) return;
         setBusy(true);
         try {
-            const response = await fetch(`/api/projects/${projectId}`, {
+            const response = await fetch(`/api/v1/projects/${projectId}`, {
                 method: 'PUT',
                 headers: buildHeaders(token, true),
                 body: JSON.stringify({
@@ -141,7 +141,7 @@ export default function ProjectPage({
         description: string;
         status: string;
     }) => {
-        const response = await fetch('/api/tasks', {
+        const response = await fetch('/api/v1/tasks', {
             method: 'POST',
             headers: buildHeaders(token, true),
             body: JSON.stringify({
@@ -159,7 +159,7 @@ export default function ProjectPage({
     const updateTask = async (taskId: string, updates: Partial<Task>) => {
         const sourceTask = tasks.find((item) => item.id === taskId);
         if (!sourceTask) throw new Error('Tache introuvable');
-        const response = await fetch(`/api/tasks/${taskId}`, {
+        const response = await fetch(`/api/v1/tasks/${taskId}`, {
             method: 'PUT',
             headers: buildHeaders(token, true),
             body: JSON.stringify({
@@ -175,7 +175,7 @@ export default function ProjectPage({
     };
 
     const deleteTask = async (taskId: string) => {
-        const response = await fetch(`/api/tasks/${taskId}`, {
+        const response = await fetch(`/api/v1/tasks/${taskId}`, {
             method: 'DELETE',
             headers: buildHeaders(token, false),
         });
