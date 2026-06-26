@@ -258,13 +258,13 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Envoyer docker-compose.prod.yml sur le serveur d'intégration
+            - name: Envoyer docker-compose.deploy.yml sur le serveur d'intégration
               uses: appleboy/scp-action@v0.1.7
               with:
                   host: ${{ secrets.VM_HOST_INT }}
                   username: ${{ secrets.VM_USER_INT }}
                   key: ${{ secrets.SSH_PRIVATE_KEY_INT }}
-                  source: docker-compose.prod.yml
+                  source: docker-compose.deploy.yml
                   target: ~/app/
 
             - name: Déployer sur le serveur d'intégration
@@ -292,11 +292,11 @@ jobs:
                       REGISTRY_OWNER="${{ github.repository_owner }}"
                       export REGISTRY_OWNER
 
-                      docker compose -f docker-compose.prod.yml run --rm project-migrations
-                      docker compose -f docker-compose.prod.yml run --rm task-migrations
+                      docker compose -f docker-compose.deploy.yml run --rm project-migrations
+                      docker compose -f docker-compose.deploy.yml run --rm task-migrations
 
                       echo "=== [INT] 2b. Démarrer Redis si absent ==="
-                      docker compose -f docker-compose.prod.yml up -d redis
+                      docker compose -f docker-compose.deploy.yml up -d redis
 
                       echo "=== [INT] 3. Redémarrage progressif des services ==="
                       ROLLBACK_NEEDED=false
@@ -304,11 +304,11 @@ jobs:
                       for service in "${SERVICES[@]}"; do
                         echo "--- $service ---"
                         docker pull "$REGISTRY/$service:latest"
-                        docker compose -f docker-compose.prod.yml up -d --no-deps --pull never "$service"
+                        docker compose -f docker-compose.deploy.yml up -d --no-deps --pull never "$service"
 
                         HEALTHY=false
                         for i in $(seq 1 20); do
-                          CID=$(docker compose -f docker-compose.prod.yml ps -q "$service" 2>/dev/null | head -1)
+                          CID=$(docker compose -f docker-compose.deploy.yml ps -q "$service" 2>/dev/null | head -1)
                           if [ -z "$CID" ]; then sleep 3; continue; fi
                           RUNNING=$(docker inspect --format='{{.State.Running}}' "$CID" 2>/dev/null || echo "false")
                           HEALTH=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$CID" 2>/dev/null || echo "none")
@@ -324,7 +324,7 @@ jobs:
                           PREV="${PREV_IMAGES[$service]}"
                           if [ -n "$PREV" ]; then
                             docker tag "$PREV" "$REGISTRY/$service:rollback"
-                            docker compose -f docker-compose.prod.yml up -d --no-deps "$service"
+                            docker compose -f docker-compose.deploy.yml up -d --no-deps "$service"
                           fi
                           break
                         fi
@@ -362,13 +362,13 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Envoyer docker-compose.prod.yml sur le serveur de production
+            - name: Envoyer docker-compose.deploy.yml sur le serveur de production
               uses: appleboy/scp-action@v0.1.7
               with:
                   host: ${{ secrets.VM_HOST_PROD }}
                   username: ${{ secrets.VM_USER_PROD }}
                   key: ${{ secrets.SSH_PRIVATE_KEY_PROD }}
-                  source: docker-compose.prod.yml
+                  source: docker-compose.deploy.yml
                   target: ~/app/
 
             - name: Déployer sur le serveur de production
@@ -393,11 +393,14 @@ jobs:
                       done
 
                       echo "=== [PROD] 2. Migrations de base de données ==="
-                      docker compose -f docker-compose.prod.yml run --rm project-migrations
-                      docker compose -f docker-compose.prod.yml run --rm task-migrations
+                      REGISTRY_OWNER="${{ github.repository_owner }}"
+                      export REGISTRY_OWNER
+
+                      docker compose -f docker-compose.deploy.yml run --rm project-migrations
+                      docker compose -f docker-compose.deploy.yml run --rm task-migrations
 
                       echo "=== [PROD] 2b. Démarrer Redis si absent ==="
-                      docker compose -f docker-compose.prod.yml up -d redis
+                      docker compose -f docker-compose.deploy.yml up -d redis
 
                       echo "=== [PROD] 3. Redémarrage progressif des services ==="
                       ROLLBACK_NEEDED=false
@@ -405,11 +408,11 @@ jobs:
                       for service in "${SERVICES[@]}"; do
                         echo "--- $service ---"
                         docker pull "$REGISTRY/$service:latest"
-                        docker compose up -d --no-deps --pull never "$service"
+                        docker compose -f docker-compose.deploy.yml up -d --no-deps --pull never "$service"
 
                         HEALTHY=false
                         for i in $(seq 1 20); do
-                          CID=$(docker compose -f docker-compose.prod.yml ps -q "$service" 2>/dev/null | head -1)
+                          CID=$(docker compose -f docker-compose.deploy.yml ps -q "$service" 2>/dev/null | head -1)
                           if [ -z "$CID" ]; then sleep 3; continue; fi
                           RUNNING=$(docker inspect --format='{{.State.Running}}' "$CID" 2>/dev/null || echo "false")
                           HEALTH=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$CID" 2>/dev/null || echo "none")
@@ -425,7 +428,7 @@ jobs:
                           PREV="${PREV_IMAGES[$service]}"
                           if [ -n "$PREV" ]; then
                             docker tag "$PREV" "$REGISTRY/$service:rollback"
-                            docker compose -f docker-compose.prod.yml up -d --no-deps "$service"
+                            docker compose -f docker-compose.deploy.yml up -d --no-deps "$service"
                           fi
                           break
                         fi
