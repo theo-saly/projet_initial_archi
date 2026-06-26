@@ -82,6 +82,29 @@ services:
         image: redis:7-alpine
         restart: unless-stopped
 
+    api-gateway:
+        image: ghcr.io/${REGISTRY_OWNER}/projet_initial_archi/api-gateway:latest
+        ports:
+            - '3005:3005'
+        environment:
+            - NODE_ENV=production
+            - AUTH_SERVICE_URL=http://auth-service:3001
+            - PROJECT_SERVICE_URL=http://project-service:3002
+            - TASK_SERVICE_URL=http://task-service:3003
+        depends_on:
+            - auth-service
+            - project-service
+            - task-service
+        restart: unless-stopped
+
+    frontend:
+        image: ghcr.io/${REGISTRY_OWNER}/projet_initial_archi/frontend:latest
+        ports:
+            - '80:80'
+        depends_on:
+            - api-gateway
+        restart: unless-stopped
+
 volumes:
     auth-data:
     project-data:
