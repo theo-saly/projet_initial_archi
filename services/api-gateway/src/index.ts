@@ -60,7 +60,7 @@ if (isDevelopment) {
 }
 
 app.use(
-    `/${apiVersion}/:resource/*path`,
+    `/${apiVersion}/:resource{/*path}`,
     async (req: Request, res: Response) => {
         const resource = String(req.params.resource);
         const serviceName = serviceByResource[resource];
