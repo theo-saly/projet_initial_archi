@@ -295,6 +295,9 @@ jobs:
                       docker compose -f docker-compose.prod.yml run --rm project-migrations
                       docker compose -f docker-compose.prod.yml run --rm task-migrations
 
+                      echo "=== [INT] 2b. Démarrer Redis si absent ==="
+                      docker compose -f docker-compose.prod.yml up -d redis
+
                       echo "=== [INT] 3. Redémarrage progressif des services ==="
                       ROLLBACK_NEEDED=false
 
@@ -392,6 +395,9 @@ jobs:
                       echo "=== [PROD] 2. Migrations de base de données ==="
                       docker compose -f docker-compose.prod.yml run --rm project-migrations
                       docker compose -f docker-compose.prod.yml run --rm task-migrations
+
+                      echo "=== [PROD] 2b. Démarrer Redis si absent ==="
+                      docker compose -f docker-compose.prod.yml up -d redis
 
                       echo "=== [PROD] 3. Redémarrage progressif des services ==="
                       ROLLBACK_NEEDED=false
