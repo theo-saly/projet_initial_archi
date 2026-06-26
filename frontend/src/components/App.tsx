@@ -90,7 +90,7 @@ export default function App() {
         setBusy(true);
         clearMessage();
         try {
-            const response = await fetch('/api/auth/login', {
+            const response = await fetch('/api/v1/auth/login', {
                 method: 'POST',
                 headers: buildHeaders('', true),
                 body: JSON.stringify(credentials),
@@ -117,7 +117,7 @@ export default function App() {
         setBusy(true);
         clearMessage();
         try {
-            const response = await fetch('/api/auth/register', {
+            const response = await fetch('/api/v1/auth/register', {
                 method: 'POST',
                 headers: buildHeaders('', true),
                 body: JSON.stringify(payload),
@@ -146,7 +146,7 @@ export default function App() {
         setBusy(true);
         clearMessage();
         try {
-            const res = await fetch('/api/auth/profile', {
+            const res = await fetch('/api/v1/auth/profile', {
                 method: 'DELETE',
                 headers: buildHeaders(token, false),
             });
