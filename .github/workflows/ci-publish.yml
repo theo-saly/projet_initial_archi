@@ -305,8 +305,11 @@ jobs:
 
                         HEALTHY=false
                         for i in $(seq 1 20); do
-                          STATUS=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$service" 2>/dev/null || echo "none")
-                          if [ "$STATUS" = "healthy" ] || [ "$STATUS" = "none" ]; then
+                          CID=$(docker compose -f docker-compose.prod.yml ps -q "$service" 2>/dev/null | head -1)
+                          if [ -z "$CID" ]; then sleep 3; continue; fi
+                          RUNNING=$(docker inspect --format='{{.State.Running}}' "$CID" 2>/dev/null || echo "false")
+                          HEALTH=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$CID" 2>/dev/null || echo "none")
+                          if [ "$RUNNING" = "true" ] && { [ "$HEALTH" = "healthy" ] || [ "$HEALTH" = "none" ]; }; then
                             HEALTHY=true; break
                           fi
                           sleep 3
@@ -400,8 +403,11 @@ jobs:
 
                         HEALTHY=false
                         for i in $(seq 1 20); do
-                          STATUS=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$service" 2>/dev/null || echo "none")
-                          if [ "$STATUS" = "healthy" ] || [ "$STATUS" = "none" ]; then
+                          CID=$(docker compose -f docker-compose.prod.yml ps -q "$service" 2>/dev/null | head -1)
+                          if [ -z "$CID" ]; then sleep 3; continue; fi
+                          RUNNING=$(docker inspect --format='{{.State.Running}}' "$CID" 2>/dev/null || echo "false")
+                          HEALTH=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$CID" 2>/dev/null || echo "none")
+                          if [ "$RUNNING" = "true" ] && { [ "$HEALTH" = "healthy" ] || [ "$HEALTH" = "none" ]; }; then
                             HEALTHY=true; break
                           fi
                           sleep 3
