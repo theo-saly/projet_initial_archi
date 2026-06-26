@@ -292,9 +292,8 @@ jobs:
                       REGISTRY_OWNER="${{ github.repository_owner }}"
                       export REGISTRY_OWNER
 
-                      docker compose -f docker-compose.prod.yml --profile production up \
-                        project-migrations task-migrations \
-                        --no-deps --wait
+                      docker compose -f docker-compose.prod.yml run --rm project-migrations
+                      docker compose -f docker-compose.prod.yml run --rm task-migrations
 
                       echo "=== [INT] 3. Redémarrage progressif des services ==="
                       ROLLBACK_NEEDED=false
@@ -388,9 +387,8 @@ jobs:
                       done
 
                       echo "=== [PROD] 2. Migrations de base de données ==="
-                      docker compose --profile production up \
-                        project-migrations task-migrations \
-                        --no-deps --wait
+                      docker compose -f docker-compose.prod.yml run --rm project-migrations
+                      docker compose -f docker-compose.prod.yml run --rm task-migrations
 
                       echo "=== [PROD] 3. Redémarrage progressif des services ==="
                       ROLLBACK_NEEDED=false
