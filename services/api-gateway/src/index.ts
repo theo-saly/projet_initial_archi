@@ -59,60 +59,66 @@ if (isDevelopment) {
     });
 }
 
-app.use(`/${apiVersion}/:resource/*`, async (req: Request, res: Response) => {
-    const resource = String(req.params.resource);
-    const serviceName = serviceByResource[resource];
+app.use(
+    `/${apiVersion}/:resource/*path`,
+    async (req: Request, res: Response) => {
+        const resource = String(req.params.resource);
+        const serviceName = serviceByResource[resource];
 
-    if (!serviceName) {
-        return res.status(404).json({
-            error: `Unknown API resource: ${resource}`,
-        });
-    }
+        if (!serviceName) {
+            return res.status(404).json({
+                error: `Unknown API resource: ${resource}`,
+            });
+        }
 
-    const upstreamBase = new URL(serviceUrls[serviceName]);
-    const rawTail = String(req.params[0] ?? '');
-    const safeTail = rawTail
-        .split('/')
-        .filter(
-            (segment) =>
-                segment.length > 0 && segment !== '.' && segment !== '..',
-        )
-        .map((segment) => encodeURIComponent(segment))
-        .join('/');
-    const targetUrl = new URL(
-        `/${serviceName}${safeTail ? `/${safeTail}` : ''}`,
-        upstreamBase,
-    );
-    const query = new URLSearchParams(
-        req.query as Record<string, string>,
-    ).toString();
-    if (query) {
-        targetUrl.search = query;
-    }
+        const upstreamBase = new URL(serviceUrls[serviceName]);
+        const rawTail = String(req.params['path'] ?? '');
+        const safeTail = rawTail
+            .split('/')
+            .filter(
+                (segment) =>
+                    segment.length > 0 && segment !== '.' && segment !== '..',
+            )
+            .map((segment) => encodeURIComponent(segment))
+            .join('/');
+        const targetUrl = new URL(
+            `/${serviceName}${safeTail ? `/${safeTail}` : ''}`,
+            upstreamBase,
+        );
+        const query = new URLSearchParams(
+            req.query as Record<string, string>,
+        ).toString();
+        if (query) {
+            targetUrl.search = query;
+        }
 
-    try {
-        const response = await fetch(targetUrl, {
-            method: req.method,
-            headers: forwardHeaders(req),
-            body: shouldForwardBody(req.method)
-                ? JSON.stringify(req.body ?? {})
-                : undefined,
-        });
+        try {
+            const response = await fetch(targetUrl, {
+                method: req.method,
+                headers: forwardHeaders(req),
+                body: shouldForwardBody(req.method)
+                    ? JSON.stringify(req.body ?? {})
+                    : undefined,
+            });
 
-        res.status(response.status);
-        response.headers.forEach((value, key) => {
-            if (!['content-encoding', 'content-length'].includes(key)) {
-                res.setHeader(key, value);
-            }
-        });
+            res.status(response.status);
+            response.headers.forEach((value, key) => {
+                if (!['content-encoding', 'content-length'].includes(key)) {
+                    res.setHeader(key, value);
+                }
+            });
 
-        const body = await response.arrayBuffer();
-        res.send(Buffer.from(body));
-    } catch (error) {
-        console.error(`Gateway proxy error for ${targetUrl.toString()}`, error);
-        res.status(502).json({ error: 'Bad gateway' });
-    }
-});
+            const body = await response.arrayBuffer();
+            res.send(Buffer.from(body));
+        } catch (error) {
+            console.error(
+                `Gateway proxy error for ${targetUrl.toString()}`,
+                error,
+            );
+            res.status(502).json({ error: 'Bad gateway' });
+        }
+    },
+);
 
 app.use((_req, res) => {
     res.status(404).json({
