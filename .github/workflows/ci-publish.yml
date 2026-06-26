@@ -26,6 +26,14 @@ jobs:
                       port: 3003
                     - service: notification-service
                       port: 3004
+                    - service: api-gateway
+                      port: 3005
+                      dockerfile: services/api-gateway/Dockerfile
+                    - service: frontend
+                      port: 80
+                      dockerfile: frontend/Dockerfile
+                      context: frontend
+                      service_dir: frontend
         steps:
             - uses: actions/checkout@v4
               with:
@@ -52,12 +60,14 @@ jobs:
               id: compat
               run: |
                   SERVICE=${{ matrix.service }}
-                  COMPAT="services/$SERVICE/compatibility.json"
+                  SERVICE_DIR="${{ matrix.service_dir || '' }}"
+                  if [ -z "$SERVICE_DIR" ]; then SERVICE_DIR="services/$SERVICE"; fi
+                  COMPAT="$SERVICE_DIR/compatibility.json"
 
-                  CURRENT=$(node -p "require('./services/$SERVICE/package.json').version")
+                  CURRENT=$(node -p "require('./$SERVICE_DIR/package.json').version" 2>/dev/null || echo "1.0.0")
 
                   # Vérifier si ce service a des changements réels (hors fichiers de config)
-                  CHANGED=$(git diff --name-only HEAD~1 HEAD -- "services/$SERVICE/" \
+                  CHANGED=$(git diff --name-only HEAD~1 HEAD -- "$SERVICE_DIR/" \
                     | grep -v "package.json" | grep -v "compatibility.json" || true)
 
                   if [ -n "$CHANGED" ]; then
@@ -72,22 +82,30 @@ jobs:
                   echo "major=$(echo "$NEXT" | cut -d. -f1)" >> "$GITHUB_OUTPUT"
                   echo "minor=$(echo "$NEXT" | cut -d. -f1-2)" >> "$GITHUB_OUTPUT"
 
-                  echo "provides_api=$(node -p "require('./$COMPAT').provides['api-version'] || 'v1'")" \
-                    >> "$GITHUB_OUTPUT"
-                  echo "req_auth=$(node -p "require('./$COMPAT').requires['auth-service'] || ''")" \
-                    >> "$GITHUB_OUTPUT"
-                  echo "req_project=$(node -p "require('./$COMPAT').requires['project-service'] || ''")" \
-                    >> "$GITHUB_OUTPUT"
-                  echo "req_task=$(node -p "require('./$COMPAT').requires['task-service'] || ''")" \
-                    >> "$GITHUB_OUTPUT"
-                  echo "req_notification=$(node -p "require('./$COMPAT').requires['notification-service'] || ''")" \
-                    >> "$GITHUB_OUTPUT"
+                  if [ -f "./$COMPAT" ]; then
+                    echo "provides_api=$(node -p "require('./$COMPAT').provides?.['api-version'] || 'v1'")" \
+                      >> "$GITHUB_OUTPUT"
+                    echo "req_auth=$(node -p "require('./$COMPAT').requires?.['auth-service'] || ''")" \
+                      >> "$GITHUB_OUTPUT"
+                    echo "req_project=$(node -p "require('./$COMPAT').requires?.['project-service'] || ''")" \
+                      >> "$GITHUB_OUTPUT"
+                    echo "req_task=$(node -p "require('./$COMPAT').requires?.['task-service'] || ''")" \
+                      >> "$GITHUB_OUTPUT"
+                    echo "req_notification=$(node -p "require('./$COMPAT').requires?.['notification-service'] || ''")" \
+                      >> "$GITHUB_OUTPUT"
+                  else
+                    echo "provides_api=v1" >> "$GITHUB_OUTPUT"
+                    echo "req_auth=" >> "$GITHUB_OUTPUT"
+                    echo "req_project=" >> "$GITHUB_OUTPUT"
+                    echo "req_task=" >> "$GITHUB_OUTPUT"
+                    echo "req_notification=" >> "$GITHUB_OUTPUT"
+                  fi
 
             - name: Build et push ${{ matrix.service }} (:sha et :vX.Y.Z)
               uses: docker/build-push-action@v6
               with:
-                  context: .
-                  file: services/Dockerfile
+                  context: ${{ matrix.context || '.' }}
+                  file: ${{ matrix.dockerfile || 'services/Dockerfile' }}
                   build-args: |
                       SERVICE=${{ matrix.service }}
                       PORT=${{ matrix.port }}
@@ -243,7 +261,7 @@ jobs:
               # imagetools create recrée le tag sans re-télécharger l'image.
               run: |
                   REGISTRY="ghcr.io/${{ github.repository_owner }}/projet_initial_archi"
-                  for service in auth-service project-service task-service notification-service; do
+                  for service in auth-service project-service task-service notification-service api-gateway frontend; do
                     docker buildx imagetools create \
                       --tag "$REGISTRY/$service:latest" \
                       "$REGISTRY/$service:${{ github.sha }}"
@@ -278,7 +296,7 @@ jobs:
                       cd ~/app
 
                       REGISTRY="ghcr.io/${{ github.repository_owner }}/projet_initial_archi"
-                      SERVICES=("auth-service" "project-service" "task-service" "notification-service")
+                      SERVICES=("auth-service" "project-service" "task-service" "notification-service" "api-gateway" "frontend")
 
                       echo "=== [INT] 1. Sauvegarde des images actuelles ==="
                       declare -A PREV_IMAGES
@@ -382,7 +400,7 @@ jobs:
                       cd ~/app
 
                       REGISTRY="ghcr.io/${{ github.repository_owner }}/projet_initial_archi"
-                      SERVICES=("auth-service" "project-service" "task-service" "notification-service")
+                      SERVICES=("auth-service" "project-service" "task-service" "notification-service" "api-gateway" "frontend")
 
                       echo "=== [PROD] 1. Sauvegarde des images actuelles ==="
                       declare -A PREV_IMAGES
