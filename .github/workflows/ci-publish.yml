@@ -305,7 +305,7 @@ jobs:
 
                         HEALTHY=false
                         for i in $(seq 1 20); do
-                          STATUS=$(docker inspect --format='{{.State.Health.Status}}' "$service" 2>/dev/null || echo "none")
+                          STATUS=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$service" 2>/dev/null || echo "none")
                           if [ "$STATUS" = "healthy" ] || [ "$STATUS" = "none" ]; then
                             HEALTHY=true; break
                           fi
@@ -400,7 +400,7 @@ jobs:
 
                         HEALTHY=false
                         for i in $(seq 1 20); do
-                          STATUS=$(docker inspect --format='{{.State.Health.Status}}' "$service" 2>/dev/null || echo "none")
+                          STATUS=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$service" 2>/dev/null || echo "none")
                           if [ "$STATUS" = "healthy" ] || [ "$STATUS" = "none" ]; then
                             HEALTHY=true; break
                           fi
