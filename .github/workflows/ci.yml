@@ -305,7 +305,7 @@ jobs:
 
             - name: Setup Docker Buildx
               if: steps.check.outputs.changed == 'true'
-              uses: docker/setup-buildx-action@v3
+              uses: docker/setup-buildx-action@v4
 
             - name: Build image ${{ matrix.service }}
               if: steps.check.outputs.changed == 'true'
