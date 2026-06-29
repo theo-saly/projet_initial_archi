@@ -59,70 +59,76 @@ if (isDevelopment) {
     });
 }
 
-app.use(
-    `/${apiVersion}/:resource{/*path}`,
-    async (req: Request, res: Response) => {
-        const resource = String(req.params.resource);
-        const serviceName = serviceByResource[resource];
+app.use(`/:version/:resource{/*path}`, async (req: Request, res: Response) => {
+    const version = String(req.params.version);
+    const resource = String(req.params.resource);
 
-        if (!serviceName) {
-            return res.status(404).json({
-                error: `Unknown API resource: ${resource}`,
-            });
-        }
+    if (!/^v\d+$/.test(version)) {
+        return res.status(400).json({
+            error: `Version invalide : ${version}. Utilisez v1, v2, etc.`,
+        });
+    }
 
-        const upstreamBase = new URL(serviceUrls[serviceName]);
-        const rawTail = String(req.params['path'] ?? '');
-        const safeTail = rawTail
-            .split('/')
-            .filter(
-                (segment) =>
-                    segment.length > 0 && segment !== '.' && segment !== '..',
-            )
-            .map((segment) => encodeURIComponent(segment))
-            .join('/');
-        const targetUrl = new URL(
-            `/${serviceName}${safeTail ? `/${safeTail}` : ''}`,
-            upstreamBase,
-        );
-        const query = new URLSearchParams(
-            req.query as Record<string, string>,
-        ).toString();
-        if (query) {
-            targetUrl.search = query;
-        }
+    const serviceName = serviceByResource[resource];
 
-        try {
-            const response = await fetch(targetUrl, {
-                method: req.method,
-                headers: forwardHeaders(req),
-                body: shouldForwardBody(req.method)
-                    ? JSON.stringify(req.body ?? {})
-                    : undefined,
-            });
+    if (!serviceName) {
+        return res.status(404).json({
+            error: `Unknown API resource: ${resource}`,
+        });
+    }
 
-            res.status(response.status);
-            response.headers.forEach((value, key) => {
-                if (!['content-encoding', 'content-length'].includes(key)) {
-                    res.setHeader(key, value);
-                }
-            });
+    const upstreamBase = new URL(serviceUrls[serviceName]);
+    const rawTail = String(req.params['path'] ?? '');
+    const safeTail = rawTail
+        .split('/')
+        .filter(
+            (segment) =>
+                segment.length > 0 && segment !== '.' && segment !== '..',
+        )
+        .map((segment) => encodeURIComponent(segment))
+        .join('/');
 
-            const body = await response.arrayBuffer();
-            res.send(Buffer.from(body));
-        } catch (error) {
-            console.error(
-                `Gateway proxy error for ${targetUrl.toString()}`,
-                error,
-            );
-            res.status(502).json({ error: 'Bad gateway' });
-        }
-    },
-);
+    // v1 : on garde le comportement d'origine (pas de préfixe de version côté service)
+    // v2+ : on transmet le préfixe de version pour que le service puisse router
+    const versionPrefix = version === apiVersion ? '' : `/${version}`;
+    const targetUrl = new URL(
+        `${versionPrefix}/${serviceName}${safeTail ? `/${safeTail}` : ''}`,
+        upstreamBase,
+    );
+    const query = new URLSearchParams(
+        req.query as Record<string, string>,
+    ).toString();
+    if (query) {
+        targetUrl.search = query;
+    }
+
+    try {
+        const response = await fetch(targetUrl, {
+            method: req.method,
+            headers: forwardHeaders(req),
+            body: shouldForwardBody(req.method)
+                ? JSON.stringify(req.body ?? {})
+                : undefined,
+        });
+
+        res.status(response.status);
+        response.headers.forEach((value, key) => {
+            if (!['content-encoding', 'content-length'].includes(key)) {
+                res.setHeader(key, value);
+            }
+        });
+
+        const body = await response.arrayBuffer();
+        res.send(Buffer.from(body));
+    } catch (error) {
+        console.error(`Gateway proxy error for ${targetUrl.toString()}`, error);
+        res.status(502).json({ error: 'Bad gateway' });
+    }
+});
 
 app.use((_req, res) => {
     res.status(404).json({
-        error: `Use /${apiVersion}/auth, /${apiVersion}/projects or /${apiVersion}/tasks`,
+        error: `Use /${apiVersion}/auth, /${apiVersion}/projects or /${apiVersion}/tasks (v2 also supported)`,
     });
 });
 

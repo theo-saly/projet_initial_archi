@@ -1,6 +1,6 @@
 {
     "provides": {
-        "api-version": "v1"
+        "api-version": "v2"
     },
     "requires": {}
 }

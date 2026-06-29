@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createUser, getUserById } from '../persistence/user';
+import { createUserV2, getUserByIdV2 } from '../persistence/user';
 import { authRateLimit, applyCommonAuthRoutes } from './authCommon';
 
 const router = Router();
@@ -7,16 +7,18 @@ const router = Router();
 applyCommonAuthRoutes(router);
 
 router.post('/register', authRateLimit, (req, res) => {
-    const { email, password, consent } = req.body;
-    if (!email || !password || consent === undefined) {
-        return res.status(400).json({ error: 'Champs manquants' });
+    const { email, password, consent, birthDate } = req.body;
+    if (!email || !password || consent === undefined || !birthDate) {
+        return res.status(400).json({
+            error: 'Champs manquants (email, password, consent, birthDate)',
+        });
     }
     const consentBool =
         consent === true ||
         consent === 'true' ||
         consent === 1 ||
         consent === '1';
-    const user = createUser(email, password, consentBool);
+    const user = createUserV2(email, password, consentBool, birthDate);
     if (!user) {
         return res
             .status(409)
@@ -26,6 +28,7 @@ router.post('/register', authRateLimit, (req, res) => {
         id: user.id,
         email: user.email,
         consent: user.consent,
+        birthDate: user.birthDate,
     });
 });
 
@@ -36,7 +39,7 @@ router.get('/users/:id', (req, res) => {
             .status(400)
             .json({ error: 'Identifiant utilisateur invalide' });
     }
-    const user = getUserById(userId);
+    const user = getUserByIdV2(userId);
     if (!user) {
         return res.status(404).json({ error: 'Utilisateur non trouve' });
     }
