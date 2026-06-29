@@ -113,11 +113,12 @@ export default function App() {
         email: string;
         password: string;
         consent: boolean;
+        birthDate: string;
     }) => {
         setBusy(true);
         clearMessage();
         try {
-            const response = await fetch('/api/v1/auth/register', {
+            const response = await fetch('/api/v2/auth/register', {
                 method: 'POST',
                 headers: buildHeaders('', true),
                 body: JSON.stringify(payload),
