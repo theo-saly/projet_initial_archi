@@ -8,6 +8,7 @@ interface RegisterPageProps {
         email: string;
         password: string;
         consent: boolean;
+        birthDate: string;
     }) => Promise<void>;
     goToLogin: () => void;
 }
@@ -22,6 +23,7 @@ export default function RegisterPage({
         email: '',
         password: '',
         consent: false,
+        birthDate: '',
     });
 
     const handleSubmit = async (event: React.FormEvent) => {
@@ -31,6 +33,7 @@ export default function RegisterPage({
             email: formData.email.trim(),
             password: formData.password,
             consent: formData.consent,
+            birthDate: formData.birthDate,
         });
     };
 
@@ -107,6 +110,25 @@ export default function RegisterPage({
                                             setFormData({
                                                 ...formData,
                                                 password: e.target.value,
+                                            })
+                                        }
+                                        required
+                                        disabled={busy}
+                                    />
+                                </div>
+
+                                <div className="mb-3">
+                                    <label className="form-label">
+                                        Date de naissance
+                                    </label>
+                                    <input
+                                        type="date"
+                                        className="form-control"
+                                        value={formData.birthDate}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                birthDate: e.target.value,
                                             })
                                         }
                                         required
