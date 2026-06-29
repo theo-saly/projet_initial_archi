@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import {
     createUserV2,
     authenticateUser,
@@ -12,9 +13,17 @@ interface TokenPayload {
     email: string;
 }
 
+const authRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: () => process.env.NODE_ENV === 'test',
+});
+
 const router = Router();
 
-router.post('/register', (req, res) => {
+router.post('/register', authRateLimit, (req, res) => {
     const { email, password, consent, birthDate } = req.body;
     if (!email || !password || consent === undefined || !birthDate) {
         return res.status(400).json({
@@ -40,7 +49,7 @@ router.post('/register', (req, res) => {
     });
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', authRateLimit, (req, res) => {
     const { email, password } = req.body;
     const token = authenticateUser(email, password);
     if (!token) {
@@ -51,7 +60,7 @@ router.post('/login', (req, res) => {
     res.json({ token });
 });
 
-router.delete('/profile', (req, res) => {
+router.delete('/profile', authRateLimit, (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Token manquant' });
     const token = authHeader.split(' ')[1];
