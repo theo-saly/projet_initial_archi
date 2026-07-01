@@ -4,14 +4,18 @@ export const openApiDocument = {
     openapi: '3.0.3',
     info: {
         title: 'Todo Microservices API',
-        version: '1.0.0',
+        version: '2.0.0',
         description:
-            'API Gateway exposing versioned auth, project and task endpoints.',
+            'API Gateway exposing versioned auth, project and task endpoints. v1 and v2 coexist — v2 adds a mandatory birthDate field to auth registration.',
     },
     servers: [
         {
-            url: `/${apiVersion}`,
-            description: 'API Gateway',
+            url: '/v1',
+            description: 'API v1',
+        },
+        {
+            url: '/v2',
+            description: 'API v2 (auth with birthDate)',
         },
     ],
     components: {
@@ -42,6 +46,32 @@ export const openApiDocument = {
                         },
                     },
                 ],
+            },
+            RegisterPayloadV2: {
+                allOf: [
+                    { $ref: '#/components/schemas/AuthCredentials' },
+                    {
+                        type: 'object',
+                        required: ['consent', 'birthDate'],
+                        properties: {
+                            consent: { type: 'boolean' },
+                            birthDate: {
+                                type: 'string',
+                                format: 'date',
+                                example: '1990-01-15',
+                            },
+                        },
+                    },
+                ],
+            },
+            UserResponseV2: {
+                type: 'object',
+                properties: {
+                    id: { type: 'integer' },
+                    email: { type: 'string', format: 'email' },
+                    consent: { type: 'boolean' },
+                    birthDate: { type: 'string', format: 'date' },
+                },
             },
             ProjectPayload: {
                 type: 'object',
@@ -238,6 +268,99 @@ export const openApiDocument = {
                     },
                 ],
                 responses: { '200': { description: 'Task list' } },
+            },
+        },
+        '/v2/auth/register': {
+            post: {
+                tags: ['Auth v2'],
+                summary: 'Create a user account (v2 — birthDate required)',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                $ref: '#/components/schemas/RegisterPayloadV2',
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    '201': {
+                        description: 'User created',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    $ref: '#/components/schemas/UserResponseV2',
+                                },
+                            },
+                        },
+                    },
+                    '400': {
+                        description: 'Missing fields (including birthDate)',
+                    },
+                    '409': { description: 'Email already exists' },
+                },
+            },
+        },
+        '/v2/auth/login': {
+            post: {
+                tags: ['Auth v2'],
+                summary: 'Authenticate a user (v2)',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                $ref: '#/components/schemas/AuthCredentials',
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    '200': { description: 'JWT token returned' },
+                    '401': { description: 'Invalid credentials' },
+                },
+            },
+        },
+        '/v2/auth/profile': {
+            delete: {
+                tags: ['Auth v2'],
+                summary: 'Delete the authenticated user account (v2)',
+                security: [{ bearerAuth: [] }],
+                responses: {
+                    '200': { description: 'Account deleted' },
+                    '401': { description: 'Missing or invalid token' },
+                    '404': { description: 'User not found' },
+                },
+            },
+        },
+        '/v2/auth/users/{id}': {
+            get: {
+                tags: ['Auth v2'],
+                summary: 'Get a user by id (v2 — includes birthDate)',
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: 'id',
+                        in: 'path',
+                        required: true,
+                        schema: { type: 'integer' },
+                    },
+                ],
+                responses: {
+                    '200': {
+                        description: 'User found',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    $ref: '#/components/schemas/UserResponseV2',
+                                },
+                            },
+                        },
+                    },
+                    '400': { description: 'Invalid id' },
+                    '404': { description: 'User not found' },
+                },
             },
         },
         [`/${apiVersion}/tasks/{id}`]: {
